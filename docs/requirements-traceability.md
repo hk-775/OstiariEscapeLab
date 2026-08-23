@@ -13,7 +13,7 @@ Status meanings:
 |---|---|---|
 | FR-001 Scenario registry | Implemented | Resolved versioned catalog, semantic versions, provenance, review status, digest, validation. |
 | FR-002 Environment provisioning | Partial | Disposable synthetic ranges and T2 Docker posture; independently certified container/micro-VM runner pending. |
-| FR-003 Provider adapters | Partial | Deterministic scripted adapter and optional Ostiari bridge; live provider and AxonLLM adapters pending. |
+| FR-003 Provider adapters | Partial | Deterministic scripted adapter plus AxonLLM fixture/live tool loop; additional direct agent-framework adapters and credentialed live qualification remain. |
 | FR-004 Action interception | Partial | Every scripted tool and delegated action is intercepted; arbitrary kernel process/network interception pending T2 runner. |
 | FR-005 Policy decision | Implemented | Allow, deny, redact, approve, suspend, terminate records with rationale and provenance. |
 | FR-006 Trajectory monitoring | Implemented | Cross-step risk, source/sink labels, effective routes/resources, actor/parent linkage. |
@@ -25,6 +25,7 @@ Status meanings:
 | FR-012 Reporting | Implemented | JSON result, event bundle, incident brief, experiments, control comparison. |
 | FR-013 Kill switch | Implemented | Independent artifact control file checked before every action. |
 | FR-014 Disclosure workflow | Implemented | Append-only private/acknowledged/remediated/coordinated/publishable ledger. |
+| FR-015 Release regression gate | Implemented | Versioned thresholds, non-zero regression exit, JSON/Markdown/HTML/JUnit reports, and GitHub Actions integration. |
 
 ## Non-functional requirements
 
@@ -33,7 +34,7 @@ Status meanings:
 | NFR-01 Isolation | Partial | No network or shell in synthetic runner; production T2 validation pending. |
 | NFR-02 Reproducibility | Implemented | Manifest, environment digest, profile, backend, model adapter, and seed frozen per run. |
 | NFR-03 Observability | Implemented | Timestamped correlated events and protected-state snapshots. |
-| NFR-04 Portability | Implemented | Standard-library Python 3.10+ and Linux-compatible Docker posture. |
+| NFR-04 Portability | Implemented | Self-contained Python 3.10+ wheel with packaged catalog/schema/baseline and Linux-compatible Docker posture. |
 | NFR-05 Privacy | Implemented | Synthetic fixtures, no private reasoning, sensitive-key redaction before evidence writes. |
 | NFR-06 Extensibility | Implemented | Data-driven scenario/assertion contracts and modular control/range adapters. |
 | NFR-07 Performance | Partial | Decision latency recorded; production load and timeout characterization pending. |
@@ -52,14 +53,14 @@ Status meanings:
 | AC-07 Frozen replay | Implemented | Replay command and test. |
 | AC-08 No live secrets, personal data, or operational exploit detail | Implemented | Synthetic-only catalog and preflight. |
 | AC-09 Three-scenario private demo and report without repair | Implemented | `escape-lab demo` runs S03, S06, and S09 across C1–C4. |
+| AC-10 AxonLLM CI release gate | Implemented | S03/S06/S09 traverse AxonLLM routing/tool translation under C4; adapter identity, model turns, containment, task, evidence, and validity are gated. |
 
 ## Deliberately pending production work
 
-- A real model/provider adapter and AxonLLM routing.
 - Independently reviewed container or micro-VM execution.
 - Kernel/network interception for arbitrary agent processes.
 - Multi-reviewer adjudication workflow and reviewer identity management.
 - Durable remote artifact storage, retention enforcement, and access control.
 - T3 cyber-range authorization and operations.
-- Statistical calibration against non-deterministic live models.
-
+- Credentialed live-provider qualification and statistical calibration against
+  non-deterministic models.

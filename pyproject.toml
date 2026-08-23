@@ -1,16 +1,43 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ostiari-escape-lab"
-version = "0.1.0"
+version = "0.2.0"
 description = "Provider-neutral agent containment benchmark and incident-to-regression system"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT-0" }
+license = "MIT-0"
+license-files = ["LICENSE"]
 authors = [{ name = "Ostiari project" }]
 dependencies = []
+keywords = ["ai", "agents", "containment", "evaluation", "security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/hk-775/OstiariEscapeLab"
+Repository = "https://github.com/hk-775/OstiariEscapeLab"
+Issues = "https://github.com/hk-775/OstiariEscapeLab/issues"
+Documentation = "https://github.com/hk-775/OstiariEscapeLab/tree/main/docs"
+Changelog = "https://github.com/hk-775/OstiariEscapeLab/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+axonllm = ["axon-llm>=0.4,<0.5"]
+dev = [
+    "build>=1.2",
+    "ruff>=0.15",
+]
 
 [project.scripts]
 escape-lab = "escape_lab.cli:main"
@@ -18,10 +45,16 @@ escape-lab = "escape_lab.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"escape_lab.data" = [
+    "baselines/*.json",
+    "scenarios/*.json",
+    "schemas/*.json",
+]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
-

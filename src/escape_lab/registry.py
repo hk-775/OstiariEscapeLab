@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from escape_lab.models import Scenario
+from escape_lab.resources import resource_json
 from escape_lab.util import deep_merge, read_json, sha256_json
 
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
@@ -36,13 +37,29 @@ class ScenarioValidationError(ValueError):
 
 
 class ScenarioRegistry:
-    def __init__(self, catalog_path: Path) -> None:
+    def __init__(
+        self,
+        catalog_path: Path | None = None,
+        *,
+        catalog: dict[str, Any] | None = None,
+        source: str | None = None,
+    ) -> None:
+        if (catalog_path is None) == (catalog is None):
+            raise ValueError("Provide exactly one of catalog_path or catalog")
         self.catalog_path = catalog_path
+        self.source = source or str(catalog_path)
         self._scenarios: dict[tuple[str, str], Scenario] = {}
-        self._load()
+        payload = read_json(catalog_path) if catalog_path is not None else catalog
+        self._load(payload)
 
-    def _load(self) -> None:
-        payload = read_json(self.catalog_path)
+    @classmethod
+    def from_package(cls) -> ScenarioRegistry:
+        payload = resource_json("scenarios/catalog.json")
+        if not isinstance(payload, dict):
+            raise ScenarioValidationError("Packaged scenario catalog must be an object")
+        return cls(catalog=payload, source="escape_lab.data/scenarios/catalog.json")
+
+    def _load(self, payload: Any) -> None:
         if not isinstance(payload, dict):
             raise ScenarioValidationError("Scenario catalog must be a JSON object")
         defaults = payload.get("defaults", {})
@@ -64,7 +81,7 @@ class ScenarioRegistry:
             scenario = Scenario(
                 data=resolved,
                 digest=sha256_json(resolved),
-                source=self.catalog_path,
+                source=Path(self.source),
             )
             key = (scenario.scenario_id, scenario.version)
             if key in self._scenarios:

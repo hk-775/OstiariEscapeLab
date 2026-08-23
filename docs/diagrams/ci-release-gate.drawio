@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net" modified="2026-08-23T23:30:00.000Z" agent="Ostiari Escape Lab" version="26.0.9">
+  <diagram id="ci-release-gate" name="CI Release Gate">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="700" background="#ffffff" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="&lt;b&gt;Ostiari Escape Lab — AxonLLM CI Release Gate&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1500" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="pr" value="&lt;b&gt;AxonLLM change&lt;/b&gt;&lt;br&gt;Pull request or push" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ci" value="&lt;b&gt;GitHub Actions&lt;/b&gt;&lt;br&gt;Install both wheels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="220" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="axon" value="&lt;b&gt;AxonLLM router&lt;/b&gt;&lt;br&gt;Loopback provider fixture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="400" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="control" value="&lt;b&gt;C4 control plane&lt;/b&gt;&lt;br&gt;Allow, deny, redact, stop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="580" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="range" value="&lt;b&gt;Synthetic range&lt;/b&gt;&lt;br&gt;State transition + rollback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="evidence" value="&lt;b&gt;Evidence store&lt;/b&gt;&lt;br&gt;Hash chain + snapshots" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="940" y="150" width="100" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="adjudicate" value="&lt;b&gt;Adjudicator&lt;/b&gt;&lt;br&gt;O0–O4 + validity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="gate" value="Baseline thresholds satisfied?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="150" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="pass" value="&lt;b&gt;PASS&lt;/b&gt;&lt;br&gt;Green release check" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#274e13;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="40" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="fail" value="&lt;b&gt;REGRESSION&lt;/b&gt;&lt;br&gt;Exit 10 + reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#990000;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="280" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="reports" value="JSON • Markdown • HTML • JUnit" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="320" width="120" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="pr" target="ci" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="ci" target="axon" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="axon" target="control" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="control" target="range" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="range" target="evidence" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;" edge="1" source="control" target="evidence" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="evidence" target="adjudicate" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;" edge="1" source="adjudicate" target="gate" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeColor=#82b366;" edge="1" source="gate" target="pass" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeColor=#b85450;" edge="1" source="gate" target="fail" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;" edge="1" source="gate" target="reports" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -26,6 +26,20 @@ contracts. The registry resolves each contract into a complete immutable
 manifest, validates required fields, and computes its SHA-256 digest. A frozen
 copy is stored in every run manifest.
 
+## Agent adapters
+
+The orchestrator consumes an agent-session protocol rather than reading
+scenario steps directly. Two adapters currently implement it:
+
+- `scripted-agent` resolves the reviewed deterministic reference trajectory;
+- `axonllm` opens an AxonLLM chat/tool loop, offers only synthetic range tools,
+  returns policy and tool observations, and records routed model metadata.
+
+The AxonLLM fixture mode sends requests through AxonLLM's real router and
+OpenAI-shaped tool translation to a loopback-only provider stub. Live mode uses
+customer-supplied AxonLLM model/provider configuration. Both modes execute tools
+only through the same Escape Lab control and synthetic-range boundary.
+
 ## Run orchestrator
 
 The orchestrator resolves the scenario, control profile, seed, environment
@@ -98,3 +112,15 @@ observable outcome even when rollback or teardown later restores state:
 
 Infrastructure defects invalidate a run rather than being attributed to the
 agent.
+
+## Release gate
+
+`escape-lab gate` resolves a versioned baseline, executes its scenario/profile
+matrix, and evaluates the resulting runs against explicit thresholds. The gate
+checks the active agent adapter, maximum outcome, containment failure rate,
+task completion, evidence completeness, invalid runs, exercised prohibited
+attempts, and routed model turns.
+
+The output contains JSON for automation, Markdown for pull requests, standalone
+HTML for reviewers, and JUnit XML for CI test surfaces. A regression returns
+exit code `10`.

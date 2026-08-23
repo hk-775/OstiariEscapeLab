@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: escape-lab-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install project and development tools
+        run: python -m pip install ".[dev]"
+
+      - name: Lint
+        run: python -m ruff check src tests scripts
+
+      - name: Run core regression suite
+        run: python -m unittest discover -s tests -v
+
+  wheel:
+    name: Installed wheel smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Build distributions
+        run: |
+          python -m pip install build
+          python -m build
+
+      - name: Install and run outside the checkout
+        run: |
+          python -m venv "${RUNNER_TEMP}/escape-lab-wheel"
+          "${RUNNER_TEMP}/escape-lab-wheel/bin/python" -m pip install dist/*.whl
+          cd "${RUNNER_TEMP}"
+          "${RUNNER_TEMP}/escape-lab-wheel/bin/escape-lab" validate
+          "${RUNNER_TEMP}/escape-lab-wheel/bin/escape-lab" list
+          "${RUNNER_TEMP}/escape-lab-wheel/bin/escape-lab" \
+            --artifacts-root "${RUNNER_TEMP}/escape-lab-artifacts" \
+            run S06 --profile C4
+          "${RUNNER_TEMP}/escape-lab-wheel/bin/escape-lab" \
+            init "${RUNNER_TEMP}/consumer"
+
+  axonllm-gate:
+    name: AxonLLM containment gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out Escape Lab
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned AxonLLM
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: hk-775/axonllm
+          ref: 7a26ed1f73c91c57f1a18257dc357b2e0cb4988d
+          path: vendor/AxonLLM
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Run AxonLLM integration test
+        env:
+          AXONLLM_SRC: vendor/AxonLLM
+        run: |
+          python -m pip install ".[dev]" ./vendor/AxonLLM
+          python -m unittest tests.test_axonllm_integration -v
+
+      - name: Run first-product gate
+        id: escape-lab
+        uses: ./
+        with:
+          axonllm-path: vendor/AxonLLM
+          artifacts-root: artifacts
+
+      - name: Upload containment evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: axonllm-escape-lab-evidence
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+  incident-gate:
+    name: OpenAI/Hugging Face incident replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out Escape Lab
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned Ostiari
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: hk-775/ostiari
+          ref: 6219609bfb39fdcf02657a9b6dfdb61747fab3cb
+          path: vendor/ostiari
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Escape Lab and Ostiari
+        run: python -m pip install ".[dev]" ./vendor/ostiari
+
+      - name: Run incident integration tests
+        env:
+          OSTIARI_SRC: vendor/ostiari
+        run: python -m unittest tests.test_incident_replay -v
+
+      - name: Run incident containment gate
+        run: |
+          python -m escape_lab \
+            --project-root incidents/openai-huggingface-july-2026 \
+            --artifacts-root artifacts/incident \
+            --backend ostiari \
+            --ostiari-src vendor/ostiari \
+            gate \
+            --baseline incidents/openai-huggingface-july-2026/baseline.json \
+            --output-dir artifacts/incident/gate
+
+      - name: Upload incident evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: openai-hf-incident-replay-evidence
+          path: artifacts/incident
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,55 @@
+name: Ostiari Escape Lab gate
+description: Run the offline AxonLLM containment regression gate
+
+inputs:
+  axonllm-path:
+    description: Path to the checked-out AxonLLM repository
+    required: false
+    default: .
+  artifacts-root:
+    description: Directory for run evidence and gate reports
+    required: false
+    default: escape-lab-artifacts
+  python:
+    description: Python executable
+    required: false
+    default: python
+
+outputs:
+  report-directory:
+    description: Directory containing gate.json, gate.md, gate.html, and junit.xml
+    value: ${{ steps.gate.outputs.report-directory }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Escape Lab and AxonLLM
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        AXONLLM_PATH: ${{ inputs.axonllm-path }}
+        PYTHON_BIN: ${{ inputs.python }}
+      run: |
+        set -euo pipefail
+        "${PYTHON_BIN}" -m pip install "${ACTION_PATH}" "${AXONLLM_PATH}"
+
+    - name: Run containment release gate
+      id: gate
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        ARTIFACTS_ROOT: ${{ inputs.artifacts-root }}
+        AXONLLM_PATH: ${{ inputs.axonllm-path }}
+        PYTHON_BIN: ${{ inputs.python }}
+      run: |
+        set -euo pipefail
+        report_directory="${ARTIFACTS_ROOT}/gate"
+        "${PYTHON_BIN}" -m escape_lab \
+          --artifacts-root "${ARTIFACTS_ROOT}" \
+          --agent axonllm \
+          --axonllm-mode fixture \
+          --axonllm-src "${AXONLLM_PATH}" \
+          gate \
+          --baseline "${ACTION_PATH}/baselines/first-product.json" \
+          --output-dir "${report_directory}"
+        printf 'report-directory=%s\n' "${report_directory}" >>"${GITHUB_OUTPUT}"

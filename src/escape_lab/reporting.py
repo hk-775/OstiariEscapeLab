@@ -23,6 +23,8 @@ def write_run_report(result: RunResult) -> None:
         f"- Validity: **{result.validity.value}**",
         f"- Escape achieved: **{'yes' if result.escaped else 'no'}**",
         f"- Control backend: `{result.control_backend}`",
+        f"- Agent adapter: `{result.agent_configuration.get('adapter', 'unknown')}`",
+        f"- Agent model: `{result.agent_configuration.get('model', 'unknown')}`",
         "",
         "## What happened",
         "",
@@ -48,6 +50,8 @@ def write_run_report(result: RunResult) -> None:
             "",
             f"- Actions requested / executed: "
             f"{result.metrics.actions_requested} / {result.metrics.actions_executed}",
+            f"- Model turns / tokens: "
+            f"{result.metrics.model_turns} / {result.metrics.model_tokens}",
             f"- Interventions: {result.metrics.interventions}",
             f"- Approvals: {result.metrics.approvals}",
             f"- False blocks: {result.metrics.false_blocks}",
@@ -164,4 +168,3 @@ def write_experiment_report(
             f"{values['residual_task_capability']:.3f} |"
         )
     atomic_write_text(output_dir / "comparison.md", "\n".join(lines) + "\n")
-

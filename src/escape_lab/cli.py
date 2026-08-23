@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
 
+from escape_lab.agents import (
+    AxonLLMAgentFactory,
+    AxonLLMConfig,
+    ScriptedAgentFactory,
+)
 from escape_lab.disclosure import (
     DISCLOSURE_STATUSES,
     append_disclosure_status,
@@ -14,6 +20,7 @@ from escape_lab.disclosure import (
 )
 from escape_lab.evidence import verify_evidence
 from escape_lab.experiment import replay_run, run_experiment
+from escape_lab.gate import load_baseline, run_gate
 from escape_lab.isolation import (
     docker_preflight,
     hardened_docker_command,
@@ -25,6 +32,7 @@ from escape_lab.orchestrator import (
     default_project_root,
     default_registry,
 )
+from escape_lab.resources import resource_text
 from escape_lab.util import atomic_write_text, is_within
 
 
@@ -44,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--project-root",
         type=Path,
         default=None,
-        help="Project root containing scenarios/catalog.json",
+        help="Project root containing an override scenarios/catalog.json",
     )
     parser.add_argument(
         "--artifacts-root",
@@ -64,7 +72,66 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to an Ostiari source checkout for --backend ostiari",
     )
+    parser.add_argument(
+        "--agent",
+        choices=["scripted", "axonllm"],
+        default="scripted",
+        help="Agent adapter used to propose scenario tool calls",
+    )
+    parser.add_argument(
+        "--axonllm-mode",
+        choices=["fixture", "live"],
+        default="live",
+        help="Use the offline loopback fixture or real AxonLLM provider routes",
+    )
+    parser.add_argument(
+        "--axonllm-src",
+        type=Path,
+        default=None,
+        help="Path to an AxonLLM source checkout",
+    )
+    parser.add_argument(
+        "--axonllm-models",
+        type=Path,
+        default=None,
+        help="AxonLLM models YAML for live mode",
+    )
+    parser.add_argument(
+        "--axonllm-providers",
+        type=Path,
+        default=None,
+        help="AxonLLM providers YAML for live mode",
+    )
+    parser.add_argument(
+        "--axonllm-pricing",
+        type=Path,
+        default=None,
+        help="Optional AxonLLM pricing YAML for live mode",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="AxonLLM logical model for live mode",
+    )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        help="Optional preferred AxonLLM provider",
+    )
+    parser.add_argument(
+        "--max-agent-turns",
+        type=int,
+        default=20,
+        help="Maximum AxonLLM model turns per scenario",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init = subparsers.add_parser(
+        "init",
+        help="Create a reviewed release-gate baseline in a project",
+    )
+    init.add_argument("directory", nargs="?", type=Path, default=Path.cwd())
+    init.add_argument("--force", action="store_true")
 
     subparsers.add_parser("validate", help="Validate scenario contracts and MVP acceptance shape")
     subparsers.add_parser("list", help="List registered scenarios")
@@ -85,6 +152,23 @@ def build_parser() -> argparse.ArgumentParser:
     demo = subparsers.add_parser("demo", help="Run the private three-scenario MVP demo")
     demo.add_argument("--trials", type=int, default=1)
     demo.add_argument("--seed", type=int, default=1)
+
+    gate = subparsers.add_parser(
+        "gate",
+        help="Run a baseline and fail when containment regresses",
+    )
+    gate.add_argument(
+        "--baseline",
+        type=Path,
+        default=None,
+        help="Baseline JSON; defaults to .escape-lab/baseline.json or the packaged baseline",
+    )
+    gate.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Write gate.json, gate.md, gate.html, and junit.xml here",
+    )
 
     replay = subparsers.add_parser("replay", help="Replay a frozen run")
     replay.add_argument("run_dir", type=Path)
@@ -117,21 +201,74 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _orchestrator(args: argparse.Namespace) -> tuple[Path, RunOrchestrator]:
     project_root = (args.project_root or default_project_root()).resolve()
-    registry = default_registry(project_root)
+    registry = default_registry(
+        project_root,
+        require_project_catalog=args.project_root is not None,
+    )
+    if args.agent == "axonllm":
+        agent_factory = AxonLLMAgentFactory(
+            AxonLLMConfig(
+                source=args.axonllm_src,
+                mode=args.axonllm_mode,
+                models=args.axonllm_models,
+                providers=args.axonllm_providers,
+                pricing=args.axonllm_pricing,
+                model=args.model,
+                preferred_provider=args.provider,
+                max_turns=args.max_agent_turns,
+            )
+        )
+    else:
+        agent_factory = ScriptedAgentFactory()
     orchestrator = RunOrchestrator(
         project_root=project_root,
         registry=registry,
         artifacts_root=args.artifacts_root,
         control_backend=args.backend,
         ostiari_source=args.ostiari_src,
+        agent_factory=agent_factory,
     )
     return project_root, orchestrator
+
+
+def _init_project(directory: Path, *, force: bool) -> Path:
+    destination = directory.resolve() / ".escape-lab" / "baseline.json"
+    if destination.exists() and not force:
+        raise FileExistsError(
+            f"Baseline already exists: {destination}; use --force to replace it"
+        )
+    atomic_write_text(
+        destination,
+        resource_text("baselines/first-product.json"),
+    )
+    return destination
+
+
+def _baseline_path(argument: Path | None) -> Path | None:
+    if argument is not None:
+        return argument.resolve()
+    local = Path.cwd() / ".escape-lab" / "baseline.json"
+    return local.resolve() if local.is_file() else None
+
+
+def _append_github_summary(report_path: Path) -> None:
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary:
+        return
+    with Path(summary).open("a", encoding="utf-8") as handle:
+        handle.write(report_path.read_text(encoding="utf-8"))
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        if args.command == "init":
+            destination = _init_project(args.directory, force=args.force)
+            print(f"Created Escape Lab release baseline: {destination}")
+            print("Run: escape-lab gate")
+            return 0
+
         project_root, orchestrator = _orchestrator(args)
         if args.command == "validate":
             issues = orchestrator.registry.validate_mvp()
@@ -208,6 +345,26 @@ def main(argv: list[str] | None = None) -> int:
                 )
             print(f"Demo evidence package: {output}")
             return 0
+
+        if args.command == "gate":
+            baseline = load_baseline(_baseline_path(args.baseline))
+            gate_result = run_gate(
+                orchestrator,
+                baseline,
+                output_dir=(
+                    args.output_dir.resolve()
+                    if args.output_dir is not None
+                    else None
+                ),
+            )
+            _append_github_summary(gate_result.output_dir / "gate.md")
+            print(
+                f"Release gate: {gate_result.report['status']} -> "
+                f"{gate_result.output_dir}"
+            )
+            for reason in gate_result.report["reasons"]:
+                print(f"REGRESSION: {reason}", file=sys.stderr)
+            return 0 if gate_result.passed else 10
 
         if args.command == "replay":
             result, check = replay_run(

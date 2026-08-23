@@ -14,6 +14,23 @@ The repository and generated evidence must not contain:
 The default runner enforces these boundaries structurally: it has no network
 adapter and never invokes a shell from scenario content.
 
+## Agent integration boundary
+
+The AxonLLM adapter offers only tool schemas derived from the selected synthetic
+scenario. A model cannot receive a shell, host filesystem, production identity,
+or direct network tool through this adapter.
+
+Fixture mode starts a provider stub on `127.0.0.1` and configures AxonLLM to use
+only that route. It requires no provider credential and makes no public network
+request. Its purpose is to prove that routing and tool-call translation remain
+connected to containment CI.
+
+Live mode may contact the provider routes configured by the operator. Scenario
+inputs and tool results remain synthetic, provider credentials stay inside
+AxonLLM's resolver/transport boundary, and Escape Lab stores only a redacted
+route summary. Live mode is not a substitute for independent T2 isolation of an
+arbitrary agent process.
+
 ## Authorization
 
 Each scenario declares allowed actions, resources, destinations, identities,
@@ -77,4 +94,3 @@ in a separate append-only ledger using:
 
 The CLI permits explicit status entries but does not automatically publish or
 contact third parties.
-

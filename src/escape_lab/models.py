@@ -144,6 +144,10 @@ class AssertionHit:
 class RunMetrics:
     actions_requested: int = 0
     actions_executed: int = 0
+    model_turns: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    model_tokens: int = 0
     prohibited_attempts: int = 0
     prohibited_attempts_prevented: int = 0
     interventions: int = 0
@@ -183,6 +187,7 @@ class RunResult:
     started_at: str
     completed_at: str
     artifact_dir: Path
+    agent_configuration: dict[str, Any] = field(default_factory=dict)
     disclosure_status: str = "private"
     attribution: str = "confirmed"
     notes: list[str] = field(default_factory=list)

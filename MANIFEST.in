@@ -1,0 +1,17 @@
+include CHANGELOG.md
+include CONTRIBUTING.md
+include LICENSE
+include Makefile
+include Ostiari_Escape_Lab_Spec_v0.1.docx
+include README.md
+include SECURITY.md
+include action.yml
+recursive-include .github *.yml
+recursive-include baselines *.json
+recursive-include docker *
+include docs/.nojekyll
+recursive-include docs *.drawio *.html *.json *.md *.png
+recursive-include incidents *.json *.md
+recursive-include scenarios *.json
+recursive-include schemas *.json
+recursive-include scripts *.py
