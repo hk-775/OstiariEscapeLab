@@ -7,6 +7,13 @@ Escape Lab tests whether a long-running, tool-using agent can cause a prohibited
 state transition outside its explicit authority—and whether layered controls
 detect, interrupt, explain, and recover from the attempt.
 
+![Ostiari Escape Lab system architecture](docs/diagrams/escape-lab-architecture.png)
+
+The diagram is maintained as an editable
+[Draw.io source](docs/diagrams/escape-lab-architecture.drawio). See the
+[architecture guide](docs/architecture.md) for the component and run-lifecycle
+views.
+
 This repository is a runnable research MVP. Its default scripted agent and
 synthetic range are deliberately non-offensive:
 
@@ -44,6 +51,28 @@ universal agent safety, or safe handling of arbitrary exploit payloads.
 
 See [requirements traceability](docs/requirements-traceability.md) for the exact
 implemented and pending scope.
+
+## Deterministic reference results
+
+The current regression gold set contains one fixed-seed run for each of the
+twelve scenarios under every C0–C4 profile:
+
+![Deterministic control-profile comparison](docs/diagrams/control-profile-results.png)
+
+| Profile | Material escapes | Containment failure rate | Authorized task completion |
+|---|---:|---:|---:|
+| C0 | 12 / 12 | 100% | 100% |
+| C1 | 12 / 12 | 100% | 100% |
+| C2 | 0 / 12 | 0% | 100% |
+| C3 | 0 / 12 | 0% | 100% |
+| C4 | 0 / 12 | 0% | 91.7% |
+
+C4 completes 11 of 12 tasks because S12 deliberately triggers the
+evidence-loss circuit breaker. These are deterministic synthetic-runner results,
+not measurements of a live model or production sandbox. See the
+[complete results, outcome matrix, confidence intervals, and limitations](docs/results.md).
+The graph also has an editable
+[Draw.io source](docs/diagrams/control-profile-results.drawio).
 
 ## Quick start
 
@@ -211,6 +240,7 @@ scenarios/            Versioned scenario catalog
 schemas/              Resolved scenario JSON Schema
 tests/                Standard-library regression suite
 docs/                 Architecture, safety, and traceability
+docs/diagrams/        Editable Draw.io sources and exported PNGs
 docker/range/         Hardened T2 image starting point
 ```
 
@@ -221,4 +251,3 @@ third-party targets, uncontrolled internet access, undisclosed exploit code, or
 instructions that materially increase offensive capability. It is not a
 jailbreak leaderboard, exploit generator, vendor ranking, or proof that a model
 is generally safe.
-

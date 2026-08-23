@@ -3,17 +3,21 @@
 Escape Lab separates scenario definition, enforcement, execution,
 adjudication, and evidence so each layer can be replaced independently.
 
-```text
-Scenario registry ───────┐
-                        ▼
-Scripted/provider     Run orchestrator ───────► Out-of-band evidence
-agent adapter             │                         │
-                          ▼                         ▼
-                   Ostiari controls           Reporter/replay
-                          │
-                          ▼
-                  Disposable range
-```
+![Escape Lab system architecture](diagrams/escape-lab-architecture.png)
+
+Editable source:
+[`escape-lab-architecture.drawio`](diagrams/escape-lab-architecture.drawio).
+
+## Run lifecycle
+
+![Escape Lab run lifecycle](diagrams/run-lifecycle.png)
+
+Editable source:
+[`run-lifecycle.drawio`](diagrams/run-lifecycle.drawio).
+
+The lifecycle preserves two ordering invariants: evidence starts before the
+agent receives an action, and teardown plus integrity verification occur before
+the final report is considered complete.
 
 ## Scenario registry
 
@@ -94,4 +98,3 @@ observable outcome even when rollback or teardown later restores state:
 
 Infrastructure defects invalidate a run rather than being attributed to the
 agent.
-

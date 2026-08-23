@@ -1,0 +1,142 @@
+<mxfile host="app.diagrams.net" modified="2026-08-23T23:00:00.000Z" agent="Codex" version="29.7.9" type="device">
+  <diagram id="escape-lab-run-lifecycle-v2" name="Run Lifecycle">
+    <mxGraphModel dx="1500" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="950" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="&lt;b&gt;Ostiari Escape Lab — Run Lifecycle&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontSize=24;fontColor=#1f2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1370" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="setup" value="1. Setup and freeze" style="swimlane;startSize=34;rounded=1;container=1;collapsible=0;horizontal=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontStyle=1;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="1370" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="start" value="Start" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontStyle=1;" vertex="1" parent="setup">
+          <mxGeometry x="45" y="65" width="60" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="resolve" value="&lt;b&gt;Resolve inputs&lt;/b&gt;&lt;br&gt;scenario, profile,&lt;br&gt;backend and seed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;fontSize=12;" vertex="1" parent="setup">
+          <mxGeometry x="175" y="55" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="preflight" value="Safety preflight?&#xa;fail = abort" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=12;" vertex="1" parent="setup">
+          <mxGeometry x="405" y="50" width="150" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="create_run" value="&lt;b&gt;Create run&lt;/b&gt;&lt;br&gt;freeze manifest + digests&lt;br&gt;create disposable range" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;fontSize=12;" vertex="1" parent="setup">
+          <mxGeometry x="670" y="55" width="190" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="start_evidence" value="&lt;b&gt;Start evidence first&lt;/b&gt;&lt;br&gt;run_started + before snapshot&lt;br&gt;fsync append-only stream" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=12;" vertex="1" parent="setup">
+          <mxGeometry x="970" y="50" width="230" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="action_loop" value="2. Intercept, decide, execute and adjudicate each action" style="swimlane;startSize=34;rounded=1;container=1;collapsible=0;horizontal=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontStyle=1;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="1370" height="380" as="geometry"/>
+        </mxCell>
+        <mxCell id="next_action" value="&lt;b&gt;Next action&lt;/b&gt;&lt;br&gt;link actor, parent&lt;br&gt;and trajectory IDs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="40" y="75" width="145" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="budget_check" value="Budget + kill checks?&#xa;fail = finalize" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="225" y="70" width="145" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="preview" value="&lt;b&gt;Preview effect&lt;/b&gt;&lt;br&gt;effective resource/route&lt;br&gt;labels + risk facets" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="410" y="75" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="evaluate" value="&lt;b&gt;Evaluate C0–C4&lt;/b&gt;&lt;br&gt;static scope, action risk,&lt;br&gt;trajectory and approvals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="600" y="75" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="permit" value="Permit execution?&#xa;no = intervene" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="800" y="70" width="150" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="execute" value="&lt;b&gt;Checkpoint + execute&lt;/b&gt;&lt;br&gt;allow, redact or approve&lt;br&gt;synthetic state transition" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="990" y="75" width="165" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="record_result" value="&lt;b&gt;Record result&lt;/b&gt;&lt;br&gt;digests, redacted summary,&lt;br&gt;state delta + observation" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="1195" y="70" width="150" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="intervention" value="&lt;b&gt;Record intervention&lt;/b&gt;&lt;br&gt;mark prevented attempt&lt;br&gt;set continue / stop state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="800" y="230" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="assertion" value="&lt;b&gt;Adjudicate state&lt;/b&gt;&lt;br&gt;evaluate prohibited assertions&lt;br&gt;C4 hit = rollback + stop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="1195" y="230" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="steps_remain" value="Continue trajectory?&#xa;yes: loop&#xa;no: finalize" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="action_loop">
+          <mxGeometry x="990" y="210" width="150" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="finalization" value="3. Finalize, verify and package evidence" style="swimlane;startSize=34;rounded=1;container=1;collapsible=0;horizontal=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontStyle=1;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="720" width="1370" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="final_assertions" value="&lt;b&gt;Final adjudication&lt;/b&gt;&lt;br&gt;evidence assertions&lt;br&gt;highest observed O0–O4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;strokeWidth=2;fontSize=11;" vertex="1" parent="finalization">
+          <mxGeometry x="100" y="65" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="teardown" value="&lt;b&gt;Teardown&lt;/b&gt;&lt;br&gt;clear processes, files,&lt;br&gt;network and identities" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;fontSize=11;" vertex="1" parent="finalization">
+          <mxGeometry x="350" y="65" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="verify" value="&lt;b&gt;Verify integrity&lt;/b&gt;&lt;br&gt;evidence completeness&lt;br&gt;and SHA-256 chain" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="finalization">
+          <mxGeometry x="600" y="65" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="package" value="&lt;b&gt;Write evidence package&lt;/b&gt;&lt;br&gt;JSON result, snapshots,&lt;br&gt;incident brief + replay inputs" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="finalization">
+          <mxGeometry x="850" y="60" width="190" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="end" value="End" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontStyle=1;" vertex="1" parent="finalization">
+          <mxGeometry x="1135" y="75" width="60" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_start_resolve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="setup" source="start" target="resolve">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_resolve_preflight" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="setup" source="resolve" target="preflight">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_preflight_create" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#82b366;strokeWidth=2;fontSize=11;" edge="1" parent="setup" source="preflight" target="create_run">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_create_evidence" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="setup" source="create_run" target="start_evidence">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_evidence_next" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#1a73e8;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="start_evidence" target="next_action">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_next_budget" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="action_loop" source="next_action" target="budget_check">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_budget_preview" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#82b366;strokeWidth=2;fontSize=11;" edge="1" parent="action_loop" source="budget_check" target="preview">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_preview_evaluate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="action_loop" source="preview" target="evaluate">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_evaluate_permit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" parent="action_loop" source="evaluate" target="permit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_permit_execute" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#82b366;strokeWidth=2;fontSize=10;" edge="1" parent="action_loop" source="permit" target="execute">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_permit_intervention" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#b85450;strokeWidth=2;fontSize=10;" edge="1" parent="action_loop" source="permit" target="intervention">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_execute_record" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" parent="action_loop" source="execute" target="record_result">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_record_assertion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#1a73e8;strokeWidth=2;" edge="1" parent="action_loop" source="record_result" target="assertion">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_assertion_steps" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#b85450;fontSize=11;" edge="1" parent="action_loop" source="assertion" target="steps_remain">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_intervention_steps" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#b85450;fontSize=10;" edge="1" parent="action_loop" source="intervention" target="steps_remain">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_steps_loop" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#82b366;strokeWidth=2;fontSize=11;" edge="1" parent="action_loop" source="steps_remain" target="next_action">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_final_teardown" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="finalization" source="final_assertions" target="teardown">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_teardown_verify" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="finalization" source="teardown" target="verify">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_verify_package" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#1a73e8;strokeWidth=2;" edge="1" parent="finalization" source="verify" target="package">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_package_end" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4b5563;strokeWidth=2;" edge="1" parent="finalization" source="package" target="end">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
