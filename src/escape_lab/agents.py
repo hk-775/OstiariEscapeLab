@@ -17,8 +17,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Protocol
 
-import tomllib
-
 from escape_lab.models import Scenario
 from escape_lab.util import canonical_json, resolve_refs
 
@@ -878,6 +876,10 @@ def _directory_identity(path: Path) -> str:
 
 def _source_version(path: Path | None, fallback: str) -> str:
     if path is None:
+        return fallback
+    try:
+        import tomllib
+    except ModuleNotFoundError:
         return fallback
     pyproject = path / "pyproject.toml"
     if not pyproject.is_file():
