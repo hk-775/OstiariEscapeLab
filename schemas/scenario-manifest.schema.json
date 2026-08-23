@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ostiari.example/schemas/escape-lab-scenario-1.0.0.json",
+  "title": "Ostiari Escape Lab resolved scenario manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "identity",
+    "title",
+    "failure_mode",
+    "tier",
+    "task",
+    "authority",
+    "prohibited_outcomes",
+    "environment",
+    "stimulus",
+    "controls",
+    "instrumentation",
+    "budgets",
+    "adjudication",
+    "execution"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "owner",
+        "provenance",
+        "review_status"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^S(0[1-9]|1[0-2])$"
+        },
+        "version": {
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_status": {
+          "enum": [
+            "draft",
+            "reviewed",
+            "deprecated",
+            "quarantined"
+          ]
+        }
+      }
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "failure_mode": {
+      "pattern": "^E(0[1-9]|1[0-2])$"
+    },
+    "tier": {
+      "enum": [
+        "T0",
+        "T1",
+        "T2",
+        "T3"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "required": [
+        "objective",
+        "completion_criteria"
+      ],
+      "properties": {
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "completion_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "required": [
+        "allowed_actions",
+        "resources",
+        "destinations",
+        "identities"
+      ],
+      "properties": {
+        "allowed_actions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "resources": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "destinations": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "identities": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "actors": {
+          "type": "object"
+        },
+        "sink_labels": {
+          "type": "object"
+        }
+      }
+    },
+    "prohibited_outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "level",
+          "severity",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "state",
+              "evidence_missing"
+            ]
+          },
+          "level": {
+            "enum": [
+              "O2",
+              "O3",
+              "O4"
+            ]
+          },
+          "severity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": [
+        "image",
+        "synthetic_identities",
+        "network_policy",
+        "teardown_checks",
+        "initial_state"
+      ],
+      "properties": {
+        "image": {
+          "type": "string"
+        },
+        "synthetic_identities": {
+          "type": "array",
+          "minItems": 1
+        },
+        "network_policy": {
+          "type": "object",
+          "required": [
+            "default"
+          ],
+          "properties": {
+            "default": {
+              "const": "deny"
+            }
+          }
+        },
+        "host_mounts": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "production_credentials": {
+          "const": false
+        },
+        "teardown_checks": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "initial_state": {
+          "type": "object"
+        }
+      }
+    },
+    "stimulus": {
+      "type": "object"
+    },
+    "controls": {
+      "type": "object",
+      "required": [
+        "policy_bundle",
+        "risk_thresholds",
+        "approvals",
+        "circuit_breakers",
+        "recovery"
+      ]
+    },
+    "instrumentation": {
+      "type": "object",
+      "required": [
+        "required_events",
+        "snapshots",
+        "integrity_checks"
+      ]
+    },
+    "budgets": {
+      "type": "object",
+      "required": [
+        "wall_clock_seconds",
+        "model_tokens",
+        "cost_usd",
+        "steps",
+        "retries",
+        "delegations",
+        "tool_invocations"
+      ]
+    },
+    "adjudication": {
+      "type": "object"
+    },
+    "execution": {
+      "type": "object",
+      "required": [
+        "driver",
+        "steps"
+      ],
+      "properties": {
+        "driver": {
+          "const": "scripted"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "actor",
+              "action",
+              "params"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+
