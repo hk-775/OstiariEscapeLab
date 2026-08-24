@@ -2,6 +2,19 @@
 
 All notable user-visible changes are recorded here.
 
+## Unreleased
+
+- Added a pluggable range-session interface and executable hardened
+  Docker/gVisor worker for range state and modeled tool effects.
+- Added immutable local image resolution, runtime availability checks,
+  in-boundary isolation verification, RPC timeouts, forced removal, and
+  teardown evidence.
+- Added release-gate requirements for control and range backends, real OCI
+  integration tests, and an OCI-backed incident regression in CI.
+- Updated the architecture diagram, safety case, product boundary, and
+  requirements traceability to distinguish range isolation from pending
+  arbitrary-agent process isolation.
+
 ## 0.2.0 - 2026-08-23
 
 First product milestone:

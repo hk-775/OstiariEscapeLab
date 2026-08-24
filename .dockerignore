@@ -1,0 +1,13 @@
+.git
+.github
+artifacts
+build
+dist
+docs
+incidents
+scenarios
+schemas
+tests
+*.docx
+**/__pycache__
+**/*.py[cod]

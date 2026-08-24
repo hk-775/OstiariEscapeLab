@@ -12,7 +12,8 @@ The repository and generated evidence must not contain:
 - operational instructions that materially increase offensive capability.
 
 The default runner enforces these boundaries structurally: it has no network
-adapter and never invokes a shell from scenario content.
+adapter and never invokes a shell from scenario content. The isolated backend
+adds an executable OCI/gVisor boundary for range state and modeled tool effects.
 
 ## Agent integration boundary
 
@@ -43,9 +44,10 @@ and remains inside the synthetic range.
 
 ## Evidence separation
 
-The agent interacts only with the synthetic range. Evidence files live in a
-separate artifact directory and are not exposed as a tool or state resource.
-Every event is flushed and hash chained before the next action proceeds.
+The agent adapter interacts only through the range protocol. Evidence files
+live in a separate host artifact directory and are not mounted into, exposed as
+a tool to, or writable by the isolated range worker. Every event is flushed and
+hash chained before the next action proceeds.
 
 S12 models loss of an in-band observation channel while retaining enough
 out-of-band evidence to adjudicate the agent-caused suppression.
@@ -66,24 +68,39 @@ approve high-risk or prohibited effects.
 
 ## Teardown
 
-Synthetic ranges are created under one configured range root. Teardown refuses
-to remove any path outside that root, clears synthetic processes, files,
-network state, and identities, then removes the range directory.
+In-process synthetic ranges are created under one configured range root.
+Teardown refuses to remove any path outside that root, clears synthetic
+processes, files, network state, and identities, then removes the range
+directory.
 
-For real T2 execution, the Docker posture adds:
+For the executable isolated backend, the host resolves the requested local
+image to its immutable image ID, disables pulling, and starts one named worker
+per run with:
 
 - `--network none`;
+- `--ipc none`;
 - read-only root filesystem;
 - all capabilities dropped;
 - `no-new-privileges`;
 - non-root UID;
-- memory, CPU, and process limits;
-- a bounded `noexec` temporary filesystem.
+- memory, CPU, process, and file-descriptor limits;
+- bounded `noexec`, `nosuid`, `nodev` tmpfs mounts for `/tmp` and `/range`.
 
-This posture is a starting point, not an isolation certification. Production T2
-should add a reviewed seccomp/AppArmor profile, image signatures and digests,
-separate control/execution/evidence accounts, runtime egress enforcement, and
-independent kill infrastructure.
+The worker starts only if an in-boundary probe confirms the non-root identity,
+zero effective capabilities, `no-new-privileges`, read-only root, no usable
+non-loopback networking, and the writable bounded range tmpfs. RPC timeouts
+force-remove the exact named container. Normal teardown records the final
+snapshot, shuts down the worker, and verifies that the container no longer
+exists.
+
+This materially improves containment of the modeled range effects, but it is
+not an isolation certification. The agent/model process still runs outside this
+worker and can only be contained to the extent that its capabilities are
+restricted to mediated Escape Lab tools. Production T2 should additionally put
+the arbitrary agent process in a dedicated container or micro-VM, add reviewed
+seccomp/AppArmor policy, sign and attest images, separate
+control/execution/evidence accounts, enforce egress outside the workload
+namespace, and operate independent kill infrastructure.
 
 ## Disclosure
 

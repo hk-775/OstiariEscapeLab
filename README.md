@@ -43,16 +43,23 @@ provider stub. It does not contact a model provider or public endpoint.
 - An optional bridge to the existing Ostiari `Guard.validate` API.
 - Scripted and AxonLLM agent adapters using the same enforcement path.
 - Threshold-based release gates with JSON, Markdown, HTML, and JUnit reports.
-- Docker T2 hardening assets and preflight checks.
+- An executable Docker/gVisor range worker with fail-closed runtime checks,
+  immutable local image resolution, in-boundary isolation probes, and verified
+  container teardown.
 
 ## Current boundary
 
-The scripted and loopback AxonLLM runners are suitable for T0/T1 contract
-development, regression testing, demonstrations, and control ablation. AxonLLM
-live mode can call a configured model while keeping every offered tool
-synthetic. T2 manifests are implemented and Docker security posture is
-specified, but arbitrary-process container or micro-VM execution still requires
-an independently reviewed runner and isolation validation. The project does
+The default in-process range is suitable for T0/T1 contract development,
+regression testing, demonstrations, and control ablation. The optional Docker
+or gVisor backend moves range state, previews, checkpoints, modeled tool
+effects, and teardown into a hardened disposable worker while the control and
+evidence planes remain outside.
+
+This first executable boundary does not yet place an arbitrary agent or model
+process inside the sandbox, and it cannot intercept syscalls or capabilities
+that bypass the offered tool interface. Production use still requires dedicated
+Linux workers, reviewed syscall/MAC policy, signed images, external kill and
+evidence infrastructure, and independent isolation testing. The project does
 not claim production certification, universal agent safety, or safe handling
 of arbitrary exploit payloads.
 
@@ -120,6 +127,39 @@ escape-lab init
 ```
 
 This writes `.escape-lab/baseline.json`.
+
+## Run an isolated range
+
+Build the worker image from the repository root:
+
+```bash
+docker build \
+  --file docker/range/Dockerfile \
+  --tag escape-lab-range:0.2.0 \
+  .
+```
+
+Run a scenario with the Docker default runtime:
+
+```bash
+escape-lab \
+  --range-backend docker \
+  --sandbox-image escape-lab-range:0.2.0 \
+  run S02 --profile C4
+```
+
+For gVisor, register `runsc` with Docker first. Escape Lab checks the configured
+runtime list and refuses to start if it is unavailable:
+
+```bash
+escape-lab \
+  --range-backend gvisor \
+  --sandbox-image escape-lab-range:0.2.0 \
+  preflight
+```
+
+Each run records the resolved image ID, runtime, isolation-probe result, and
+container-removal result in its evidence package.
 
 ## AxonLLM release gate
 
@@ -198,6 +238,10 @@ See the
 [`incident replay contract and commands`](incidents/openai-huggingface-july-2026/)
 and the
 [`stable result JSON`](docs/results/openai-hf-incident-replay-v0.2.json).
+Public CI runs the controlled replay inside the real OCI range with the
+self-contained reference controls. The Ostiari-specific baseline remains
+available for local or authorized cross-repository CI and gates on both the
+Ostiari control backend and Docker range backend.
 
 ## Control profiles
 
@@ -304,10 +348,13 @@ record includes the previous record hash and its own content hash.
 
 ## T2 Docker posture
 
-Build the minimal range image:
+Build the minimal range image from the repository root:
 
 ```bash
-docker build -t escape-lab-range:0.2.0 docker/range
+docker build \
+  --file docker/range/Dockerfile \
+  --tag escape-lab-range:0.2.0 \
+  .
 ```
 
 Inspect or run the hardened preflight:
@@ -321,9 +368,20 @@ escape-lab preflight \
   --probe-docker
 ```
 
-The generated posture uses no network, a read-only root filesystem, no Linux
-capabilities, `no-new-privileges`, a non-root UID, resource limits, and a small
-`noexec` temporary filesystem.
+Run the actual range worker:
+
+```bash
+escape-lab \
+  --range-backend docker \
+  --sandbox-image escape-lab-range:0.2.0 \
+  run S02 --profile C4
+```
+
+The worker uses no network, a read-only root filesystem, no Linux capabilities,
+`no-new-privileges`, a non-root UID, CPU/memory/process/file limits, and bounded
+`noexec`, `nosuid`, `nodev` temporary filesystems. Startup fails unless the
+in-boundary probe confirms the expected restrictions. Timeouts force-remove the
+named container, and normal teardown verifies that it no longer exists.
 
 ## Tests
 
@@ -335,7 +393,14 @@ The test suite verifies catalog acceptance, the complete C0/C4 scenario matrix,
 profile differentiation, approval binding, evidence tamper detection, replay,
 disclosure integrity, packaged-resource installation, release-gate behavior,
 and CLI behavior. Set `AXONLLM_SRC=/path/to/AxonLLM` to include the loopback
-AxonLLM integration test.
+AxonLLM integration test. Set
+`ESCAPE_LAB_SANDBOX_IMAGE=escape-lab-range:0.2.0` to include the real OCI range
+integration test; optionally set `ESCAPE_LAB_SANDBOX_RUNTIME=runsc`.
+
+The AxonLLM and Ostiari repositories are optional cross-repository
+dependencies. Their GitHub Actions jobs run only when the repository variable
+`ENABLE_PRIVATE_INTEGRATIONS=true` and secret `CROSS_REPO_TOKEN` are configured;
+the public OCI gate is otherwise fully self-contained.
 
 ## Project layout
 
@@ -347,7 +412,7 @@ schemas/              Resolved scenario JSON Schema
 tests/                Standard-library regression suite
 docs/                 Architecture, safety, and traceability
 docs/diagrams/        Editable Draw.io sources and exported PNGs
-docker/range/         Hardened T2 image starting point
+docker/range/         Executable hardened OCI/gVisor range worker image
 incidents/            Safe synthetic replays derived from public disclosures
 ```
 

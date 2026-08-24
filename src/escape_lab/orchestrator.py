@@ -30,9 +30,9 @@ from escape_lab.models import (
     Scenario,
 )
 from escape_lab.ostiari_bridge import OstiariBridge
-from escape_lab.range import SyntheticRange
 from escape_lab.registry import ScenarioRegistry
 from escape_lab.reporting import write_run_report
+from escape_lab.sandbox import RangeFactory, RangeSession, SyntheticRangeFactory
 from escape_lab.util import (
     redact,
     sha256_json,
@@ -57,6 +57,7 @@ class RunOrchestrator:
         control_backend: str = "reference",
         ostiari_source: Path | None = None,
         agent_factory: AgentFactory | None = None,
+        range_factory: RangeFactory | None = None,
     ) -> None:
         self.project_root = project_root.resolve()
         self.registry = registry
@@ -68,6 +69,7 @@ class RunOrchestrator:
         self.control_backend = control_backend
         self.ostiari_source = ostiari_source
         self.agent_factory = agent_factory or ScriptedAgentFactory()
+        self.range_factory = range_factory or SyntheticRangeFactory()
 
     def run(
         self,
@@ -99,11 +101,15 @@ class RunOrchestrator:
         control_dir.mkdir(parents=True, exist_ok=True)
         kill_file = control_dir / f"{run_id}.kill"
 
-        synthetic_range = SyntheticRange(scenario, range_base, run_id)
+        execution_range = self.range_factory.create(
+            scenario,
+            range_base,
+            run_id,
+        )
         try:
             evidence = EvidenceStore(run_dir, run_id)
         except BaseException:
-            self._best_effort(synthetic_range.teardown)
+            self._best_effort(execution_range.teardown)
             raise
         external: OstiariBridge | None = None
         agent_session: AgentSession | None = None
@@ -136,7 +142,7 @@ class RunOrchestrator:
                 "run_id": run_id,
                 "scenario": scenario.data,
                 "scenario_digest": scenario.digest,
-                "environment_digest": synthetic_range.environment_digest,
+                "environment_digest": execution_range.environment_digest,
                 "control_profile": profile.value,
                 "control_backend": self.control_backend,
                 "seed": seed,
@@ -144,7 +150,7 @@ class RunOrchestrator:
                 "runner": {
                     "name": "ostiari-escape-lab",
                     "version": __version__,
-                    "range": "synthetic-range-v1",
+                    "range": execution_range.metadata,
                 },
                 "replay_of": replay_of,
                 "started_at": started_at,
@@ -156,14 +162,15 @@ class RunOrchestrator:
                     "scenario": scenario.scenario_id,
                     "scenario_version": scenario.version,
                     "scenario_digest": scenario.digest,
-                    "environment_digest": synthetic_range.environment_digest,
+                    "environment_digest": execution_range.environment_digest,
                     "profile": profile.value,
                     "seed": seed,
                     "control_backend": self.control_backend,
                     "agent_configuration": agent_configuration,
+                    "range_configuration": execution_range.metadata,
                 },
             )
-            evidence.snapshot("before", synthetic_range.snapshot())
+            evidence.snapshot("before", execution_range.snapshot())
         except BaseException as error:
             try:
                 evidence.record(
@@ -175,7 +182,7 @@ class RunOrchestrator:
             self._cleanup_run_resources(
                 agent_session=agent_session,
                 external=external,
-                synthetic_range=synthetic_range,
+                execution_range=execution_range,
                 evidence=evidence,
                 teardown=teardown,
             )
@@ -308,7 +315,7 @@ class RunOrchestrator:
                     if request.prohibited_attempt:
                         metrics.prohibited_attempts += 1
 
-                    preview = synthetic_range.preview(request)
+                    preview = execution_range.preview(request)
                     evidence.record(
                         "tool_request",
                         {
@@ -326,7 +333,7 @@ class RunOrchestrator:
                             "facets": list(preview.facets),
                         },
                     )
-                    checkpoint = synthetic_range.checkpoint()
+                    checkpoint = execution_range.checkpoint()
                     decision = control.evaluate(request, preview)
                     evidence.record(
                         "policy_decision",
@@ -433,7 +440,7 @@ class RunOrchestrator:
                         )
 
                     try:
-                        tool_result = synthetic_range.execute(
+                        tool_result = execution_range.execute(
                             request,
                             execution_params,
                         )
@@ -479,7 +486,7 @@ class RunOrchestrator:
                             "state_delta": preview.state_delta,
                         },
                     )
-                    if synthetic_range.emit_agent_events:
+                    if execution_range.emit_agent_events:
                         evidence.record(
                             "agent_observation",
                             {
@@ -496,15 +503,10 @@ class RunOrchestrator:
                         executed=True,
                         result=tool_result,
                     )
-                    metrics.task_completed = bool(
-                        synthetic_range.state.get("task", {}).get(
-                            "completed",
-                            False,
-                        )
-                    )
+                    metrics.task_completed = execution_range.task_completed
 
                     new_hits = adjudicator.evaluate_state(
-                        synthetic_range.state,
+                        execution_range.snapshot(),
                         sequence=evidence.sequence,
                     )
                     for hit in new_hits:
@@ -527,7 +529,7 @@ class RunOrchestrator:
                         ),
                     )
                     if new_hits and profile == ControlProfile.C4:
-                        synthetic_range.restore(checkpoint)
+                        execution_range.restore(checkpoint)
                         metrics.interventions += 1
                         evidence.record(
                             "intervention",
@@ -565,11 +567,11 @@ class RunOrchestrator:
                     },
                 )
 
-            evidence.snapshot("after", synthetic_range.snapshot())
+            evidence.snapshot("after", execution_range.snapshot())
             outcome = adjudicator.outcome(metrics.prohibited_attempts_prevented)
-            teardown = synthetic_range.teardown()
+            teardown = execution_range.teardown()
             metrics.recovery_complete = bool(teardown.get("complete"))
-            evidence.snapshot("post-teardown", synthetic_range.snapshot())
+            evidence.snapshot("post-teardown", execution_range.snapshot())
 
             anticipated_counts = evidence.counts
             anticipated_counts["run_completed"] = anticipated_counts.get("run_completed", 0) + 1
@@ -606,7 +608,7 @@ class RunOrchestrator:
                 scenario_id=scenario.scenario_id,
                 scenario_version=scenario.version,
                 scenario_digest=scenario.digest,
-                environment_digest=synthetic_range.environment_digest,
+                environment_digest=execution_range.environment_digest,
                 profile=profile,
                 seed=seed,
                 control_backend=self.control_backend,
@@ -620,6 +622,7 @@ class RunOrchestrator:
                 completed_at=utc_now_iso(),
                 artifact_dir=run_dir,
                 agent_configuration=agent_configuration,
+                range_configuration=execution_range.metadata,
                 disclosure_status=str(
                     scenario.data.get("disclosure_status", "private")
                 ),
@@ -631,7 +634,7 @@ class RunOrchestrator:
             self._cleanup_run_resources(
                 agent_session=agent_session,
                 external=external,
-                synthetic_range=synthetic_range,
+                execution_range=execution_range,
                 evidence=evidence,
                 teardown=teardown,
             )
@@ -668,7 +671,7 @@ class RunOrchestrator:
         *,
         agent_session: AgentSession | None,
         external: OstiariBridge | None,
-        synthetic_range: SyntheticRange,
+        execution_range: RangeSession,
         evidence: EvidenceStore,
         teardown: dict[str, Any],
     ) -> None:
@@ -677,7 +680,7 @@ class RunOrchestrator:
         if external is not None:
             cls._best_effort(external.close)
         if not teardown.get("complete"):
-            cls._best_effort(synthetic_range.teardown)
+            cls._best_effort(execution_range.teardown)
         cls._best_effort(evidence.close)
 
     @staticmethod

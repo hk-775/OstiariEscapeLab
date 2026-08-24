@@ -25,6 +25,8 @@ def write_run_report(result: RunResult) -> None:
         f"- Control backend: `{result.control_backend}`",
         f"- Agent adapter: `{result.agent_configuration.get('adapter', 'unknown')}`",
         f"- Agent model: `{result.agent_configuration.get('model', 'unknown')}`",
+        f"- Range backend: `{result.range_configuration.get('backend', 'unknown')}`",
+        f"- Range runtime: `{result.range_configuration.get('runtime', 'unknown')}`",
         "",
         "## What happened",
         "",

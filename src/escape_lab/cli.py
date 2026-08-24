@@ -33,6 +33,11 @@ from escape_lab.orchestrator import (
     default_registry,
 )
 from escape_lab.resources import resource_text
+from escape_lab.sandbox import (
+    DockerSandboxConfig,
+    DockerSandboxFactory,
+    SyntheticRangeFactory,
+)
 from escape_lab.util import atomic_write_text, is_within
 
 
@@ -123,6 +128,49 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=20,
         help="Maximum AxonLLM model turns per scenario",
+    )
+    parser.add_argument(
+        "--range-backend",
+        choices=["synthetic", "docker", "gvisor"],
+        default="synthetic",
+        help="Execution boundary for range state and tool effects",
+    )
+    parser.add_argument(
+        "--sandbox-image",
+        default=None,
+        help="OCI image for docker/gvisor; defaults to environment.image",
+    )
+    parser.add_argument(
+        "--sandbox-runtime",
+        default=None,
+        help="Docker runtime override; gvisor defaults to runsc",
+    )
+    parser.add_argument(
+        "--docker-binary",
+        default="docker",
+        help="Docker-compatible CLI used for isolated ranges",
+    )
+    parser.add_argument(
+        "--sandbox-memory",
+        default="256m",
+        help="Memory limit for an isolated range",
+    )
+    parser.add_argument(
+        "--sandbox-cpus",
+        default="0.5",
+        help="CPU limit for an isolated range",
+    )
+    parser.add_argument(
+        "--sandbox-pids",
+        type=int,
+        default=64,
+        help="Process limit for an isolated range",
+    )
+    parser.add_argument(
+        "--sandbox-rpc-timeout",
+        type=float,
+        default=10.0,
+        help="Seconds before a non-responsive range is force-removed",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -220,6 +268,23 @@ def _orchestrator(args: argparse.Namespace) -> tuple[Path, RunOrchestrator]:
         )
     else:
         agent_factory = ScriptedAgentFactory()
+    if args.range_backend == "synthetic":
+        range_factory = SyntheticRangeFactory()
+    else:
+        runtime = args.sandbox_runtime
+        if args.range_backend == "gvisor" and runtime is None:
+            runtime = "runsc"
+        range_factory = DockerSandboxFactory(
+            DockerSandboxConfig(
+                image=args.sandbox_image,
+                runtime=runtime,
+                docker_binary=args.docker_binary,
+                memory=args.sandbox_memory,
+                cpus=args.sandbox_cpus,
+                pids_limit=args.sandbox_pids,
+                rpc_timeout_seconds=args.sandbox_rpc_timeout,
+            )
+        )
     orchestrator = RunOrchestrator(
         project_root=project_root,
         registry=registry,
@@ -227,6 +292,7 @@ def _orchestrator(args: argparse.Namespace) -> tuple[Path, RunOrchestrator]:
         control_backend=args.backend,
         ostiari_source=args.ostiari_src,
         agent_factory=agent_factory,
+        range_factory=range_factory,
     )
     return project_root, orchestrator
 
@@ -417,19 +483,44 @@ def main(argv: list[str] | None = None) -> int:
                 for issue in issues:
                     print(f"ERROR: {issue}", file=sys.stderr)
                 return 1
-            status = docker_preflight()
+            status = docker_preflight(args.docker_binary)
+            requested_runtime = args.sandbox_runtime
+            if args.range_backend == "gvisor" and requested_runtime is None:
+                requested_runtime = "runsc"
+            runtime_ready = (
+                requested_runtime is None
+                or requested_runtime in status.runtimes
+            )
             print(
                 f"registry=valid docker_available={status.available} "
                 f"daemon_reachable={status.daemon_reachable} "
-                f"server={status.server_version or '-'}"
+                f"server={status.server_version or '-'} "
+                f"runtimes={','.join(status.runtimes) or '-'}"
             )
+            if requested_runtime:
+                print(
+                    f"requested_runtime={requested_runtime} "
+                    f"runtime_ready={runtime_ready}"
+                )
             if status.error:
                 print(f"docker_error={status.error}")
             if args.docker_image:
                 print("hardened_command:")
-                print(" ".join(hardened_docker_command(args.docker_image)))
+                print(
+                    " ".join(
+                        hardened_docker_command(
+                            args.docker_image,
+                            runtime=requested_runtime,
+                            docker_binary=args.docker_binary,
+                        )
+                    )
+                )
                 if args.probe_docker:
-                    probe = probe_docker_image(args.docker_image)
+                    probe = probe_docker_image(
+                        args.docker_image,
+                        runtime=requested_runtime,
+                        docker_binary=args.docker_binary,
+                    )
                     print(
                         f"docker_probe_success={probe['success']} "
                         f"returncode={probe['returncode']}"
@@ -438,8 +529,15 @@ def main(argv: list[str] | None = None) -> int:
                         print(probe["stdout"])
                     if probe["stderr"]:
                         print(probe["stderr"], file=sys.stderr)
-                    return 0 if probe["success"] else 5
-            return 0 if not args.probe_docker or status.daemon_reachable else 5
+                    return 0 if probe["success"] and runtime_ready else 5
+            return (
+                0
+                if (
+                    (not args.probe_docker or status.daemon_reachable)
+                    and runtime_ready
+                )
+                else 5
+            )
 
         if args.command == "clean-artifacts":
             artifacts = orchestrator.artifacts_root.resolve()

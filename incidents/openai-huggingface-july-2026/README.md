@@ -51,5 +51,26 @@ escape-lab \
   --baseline incidents/openai-huggingface-july-2026/baseline.json
 ```
 
+Real OCI range gate:
+
+```bash
+docker build \
+  --file docker/range/Dockerfile \
+  --tag escape-lab-range:0.2.0 \
+  .
+
+escape-lab \
+  --project-root incidents/openai-huggingface-july-2026 \
+  --backend ostiari \
+  --ostiari-src ../ostiari \
+  --range-backend docker \
+  --sandbox-image escape-lab-range:0.2.0 \
+  gate \
+  --baseline incidents/openai-huggingface-july-2026/sandbox-baseline.json
+```
+
 The expected baseline is O4 when enforcement is disabled and O1 when the
-boundary and service-pivot attempts are prevented.
+boundary and service-pivot attempts are prevented. The sandbox baseline also
+requires the Ostiari control backend, Docker range backend, a passing
+in-boundary isolation probe, complete evidence, and verified container
+teardown.

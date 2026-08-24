@@ -68,6 +68,23 @@ class PublicationTests(unittest.TestCase):
         )
         self.assertTrue(result["gate"]["passed"])
 
+    def test_oci_incident_result_records_isolation_and_teardown(self) -> None:
+        result = json.loads(
+            (
+                DOCS_ROOT
+                / "results"
+                / "openai-hf-incident-oci-gate-v0.2.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        self.assertTrue(result["gate"]["passed"])
+        self.assertEqual(
+            "docker",
+            result["configuration"]["range_backend"],
+        )
+        self.assertTrue(result["isolation_probe"]["passed"])
+        self.assertTrue(result["result"]["container_removed"])
+
     def test_workflow_actions_are_pinned_to_commits(self) -> None:
         workflow_paths = sorted(
             (PROJECT_ROOT / ".github" / "workflows").glob("*.yml")

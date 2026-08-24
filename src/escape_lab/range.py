@@ -78,9 +78,23 @@ class SyntheticRange:
         )
 
     @property
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "backend": "synthetic",
+            "runtime": "in-process",
+            "synthetic_only": True,
+            "network": "no adapter",
+            "commands": "modeled, never executed",
+        }
+
+    @property
     def emit_agent_events(self) -> bool:
         telemetry = self.state.get("telemetry", {})
         return bool(telemetry.get("attached", True) and telemetry.get("agent_events_enabled", True))
+
+    @property
+    def task_completed(self) -> bool:
+        return bool(self.state.get("task", {}).get("completed", False))
 
     def snapshot(self) -> dict[str, Any]:
         return deepcopy(self.state)
