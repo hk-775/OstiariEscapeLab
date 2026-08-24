@@ -238,8 +238,10 @@ See the
 [`incident replay contract and commands`](incidents/openai-huggingface-july-2026/)
 and the
 [`stable result JSON`](docs/results/openai-hf-incident-replay-v0.2.json).
-CI also runs the controlled replay inside the real OCI range and gates on both
-the Ostiari control backend and Docker range backend.
+Public CI runs the controlled replay inside the real OCI range with the
+self-contained reference controls. The Ostiari-specific baseline remains
+available for local or authorized cross-repository CI and gates on both the
+Ostiari control backend and Docker range backend.
 
 ## Control profiles
 
@@ -394,6 +396,11 @@ and CLI behavior. Set `AXONLLM_SRC=/path/to/AxonLLM` to include the loopback
 AxonLLM integration test. Set
 `ESCAPE_LAB_SANDBOX_IMAGE=escape-lab-range:0.2.0` to include the real OCI range
 integration test; optionally set `ESCAPE_LAB_SANDBOX_RUNTIME=runsc`.
+
+The AxonLLM and Ostiari repositories are optional cross-repository
+dependencies. Their GitHub Actions jobs run only when the repository variable
+`ENABLE_PRIVATE_INTEGRATIONS=true` and secret `CROSS_REPO_TOKEN` are configured;
+the public OCI gate is otherwise fully self-contained.
 
 ## Project layout
 

@@ -50,9 +50,11 @@ provider credentials or public network access. Live mode uses the same adapter
 and enforcement path with operator-supplied AxonLLM model/provider
 configuration.
 
-The incident CI job also builds the range image, runs the real OCI integration
-test, and executes the S02 incident gate with both
-`required_control_backend=ostiari` and `required_range_backend=docker`.
+Public CI builds the range image, runs the real OCI integration test, and
+executes a self-contained S02 gate requiring the reference control backend and
+Docker range backend. An optional authorized cross-repository job additionally
+runs the Ostiari-specific baseline requiring
+`required_control_backend=ostiari`.
 
 ## Remaining production boundary
 
