@@ -40,6 +40,12 @@ OpenAI-shaped tool translation to a loopback-only provider stub. Live mode uses
 customer-supplied AxonLLM model/provider configuration. Both modes execute tools
 only through the same Escape Lab control and selected range boundary.
 
+An opt-in gVisor agent runtime uses AxonLLM's real router with a deterministic
+in-process provider transport. The complete fixture process executes in a
+separate container with no non-loopback network route, provider configuration,
+credentials, or host mounts. A bounded JSON protocol carries only agent events
+and policy/tool observations between the worker and the host orchestrator.
+
 ## Run orchestrator
 
 The orchestrator resolves the scenario, control profile, seed, environment
@@ -92,6 +98,28 @@ control plane, adjudicator, and evidence store remain outside the worker.
 This boundary contains the modeled tool effects but does not yet isolate an
 arbitrary agent process or intercept direct syscalls outside the tool protocol.
 
+## Agent runtime
+
+The default agent runtime remains host-side for scripted regressions and live
+provider integrations. With `--agent-runtime gvisor`, the host instead starts
+the dedicated fixture-agent image by immutable image ID and requires `runsc`.
+The runtime uses the same non-root, read-only, capability-free,
+resource-bounded posture as the range worker and additionally verifies that
+common provider and cloud identity inputs are absent. Because gVisor does not
+surface every OCI setting identically through emulated `/proc`, startup
+requires two independent views: the worker's in-boundary observations and the
+host's inspection of Docker's actual container contract.
+
+The worker uses no HTTP or socket fixture. It constructs AxonLLM's routing
+runtime with a deterministic in-memory provider, returns reviewed tool calls
+over the bounded control channel, and is force-removed on timeout, malformed
+protocol data, or teardown failure. Control decisions, range execution,
+adjudication, kill checks, and evidence remain outside the agent boundary.
+
+This qualifies the reviewed fixture process, not arbitrary agent binaries,
+native extensions, live-model provider access, or runtime/kernel
+escape-resistance.
+
 ## Evidence pipeline
 
 Events use this logical record shape:
@@ -131,9 +159,9 @@ agent.
 
 `escape-lab gate` resolves a versioned baseline, executes its scenario/profile
 matrix, and evaluates the resulting runs against explicit thresholds. The gate
-checks the active agent adapter, maximum outcome, containment failure rate,
-task completion, evidence completeness, invalid runs, exercised prohibited
-attempts, and routed model turns.
+checks the active agent adapter and optional agent runtime, maximum outcome,
+containment failure rate, task completion, evidence completeness, invalid runs,
+exercised prohibited attempts, and routed model turns.
 
 The output contains JSON for automation, Markdown for pull requests, standalone
 HTML for reviewers, and JUnit XML for CI test surfaces. A regression returns

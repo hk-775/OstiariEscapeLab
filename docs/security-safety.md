@@ -26,6 +26,13 @@ only that route. It requires no provider credential and makes no public network
 request. Its purpose is to prove that routing and tool-call translation remain
 connected to containment CI.
 
+The isolated fixture mode removes even that HTTP dependency. AxonLLM and its
+deterministic provider execute inside gVisor using an in-process transport. The
+container receives no provider configuration, provider/cloud identity
+environment variable, credential file, host mount, or usable non-loopback
+network route. Startup fails closed unless the in-boundary isolation and
+identity-absence probes pass.
+
 Live mode may contact the provider routes configured by the operator. Scenario
 inputs and tool results remain synthetic, provider credentials stay inside
 AxonLLM's resolver/transport boundary, and Escape Lab stores only a redacted
@@ -101,6 +108,17 @@ the arbitrary agent process in a dedicated container or micro-VM, add reviewed
 seccomp/AppArmor policy, sign and attest images, separate
 control/execution/evidence accounts, enforce egress outside the workload
 namespace, and operate independent kill infrastructure.
+
+When the gVisor fixture-agent runtime is selected, the reviewed AxonLLM fixture
+process does run inside a separate worker with the same hardening posture. It
+combines an in-boundary observation with inspection of Docker's actual
+container record. This dual attestation verifies `runsc`, network and IPC mode,
+the non-root user, read-only root, dropped capabilities, no-new-privileges,
+hardened tmpfs options, resource limits, and the absence of host mounts,
+devices, published ports, or identity environment inputs. It is force-removed
+on timeout or protocol failure and teardown is verified before the run is
+finalized. This does not extend to arbitrary or live agents, and it does not
+independently certify `runsc`, Docker, or the host kernel.
 
 ## Disclosure
 

@@ -89,14 +89,27 @@ class AgentSession(Protocol):
 
 
 class AgentFactory(Protocol):
-    def start(self, scenario: Scenario, *, seed: int) -> AgentSession:
+    def start(
+        self,
+        scenario: Scenario,
+        *,
+        seed: int,
+        run_id: str,
+    ) -> AgentSession:
         """Create one isolated session for a scenario run."""
 
 
 class ScriptedAgentFactory:
     """Create deterministic sessions from the reviewed reference trajectory."""
 
-    def start(self, scenario: Scenario, *, seed: int) -> ScriptedAgentSession:
+    def start(
+        self,
+        scenario: Scenario,
+        *,
+        seed: int,
+        run_id: str,
+    ) -> ScriptedAgentSession:
+        del run_id
         return ScriptedAgentSession(scenario, seed=seed)
 
 
@@ -152,6 +165,7 @@ class ScriptedAgentSession:
 class AxonLLMConfig:
     source: Path | None = None
     mode: str = "live"
+    fixture_transport: str = "loopback"
     models: Path | None = None
     providers: Path | None = None
     pricing: Path | None = None
@@ -163,6 +177,14 @@ class AxonLLMConfig:
     def __post_init__(self) -> None:
         if self.mode not in {"fixture", "live"}:
             raise ValueError("AxonLLM mode must be 'fixture' or 'live'")
+        if self.fixture_transport not in {"loopback", "offline"}:
+            raise ValueError(
+                "AxonLLM fixture_transport must be 'loopback' or 'offline'"
+            )
+        if self.mode == "live" and self.fixture_transport != "loopback":
+            raise ValueError(
+                "AxonLLM offline fixture transport is available only in fixture mode"
+            )
         if self.max_turns < 1:
             raise ValueError("AxonLLM max_turns must be at least 1")
         if self.mode == "live":
@@ -187,7 +209,14 @@ class AxonLLMAgentFactory:
     def __init__(self, config: AxonLLMConfig) -> None:
         self.config = config
 
-    def start(self, scenario: Scenario, *, seed: int) -> AxonLLMAgentSession:
+    def start(
+        self,
+        scenario: Scenario,
+        *,
+        seed: int,
+        run_id: str,
+    ) -> AxonLLMAgentSession:
+        del run_id
         session = AxonLLMAgentSession.__new__(AxonLLMAgentSession)
         try:
             session.__init__(scenario, config=self.config, seed=seed)
@@ -382,6 +411,148 @@ class _FixtureServer:
         self.thread.join(timeout=5)
 
 
+class _OfflineFixtureProviderFactory:
+    """Deterministic AxonLLM provider transport with no sockets or credentials."""
+
+    available_providers = frozenset({"openai"})
+
+    def __init__(self, state: _FixtureState) -> None:
+        self._state = state
+
+    def create(
+        self,
+        request: Any,
+        *,
+        prompt_caching_enabled: bool = False,
+        spoke: Any = None,
+    ) -> Any:
+        del prompt_caching_enabled, spoke
+
+        async def invoke(mapping: Any) -> Any:
+            from src.gateway.models import ChatCompletionResponse, TokenUsage
+
+            tool_name, arguments, call_id = self._state.response()
+            if tool_name is None:
+                message: dict[str, Any] = {
+                    "role": "assistant",
+                    "content": "The synthetic task is complete.",
+                }
+                finish_reason = "stop"
+            else:
+                offered = {
+                    str(item.get("function", {}).get("name"))
+                    for item in request.tools or []
+                    if isinstance(item, dict)
+                }
+                if tool_name not in offered:
+                    raise AgentAdapterError(
+                        "Required offline fixture tool was not offered"
+                    )
+                message = {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": call_id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_name,
+                                "arguments": canonical_json(arguments),
+                            },
+                        }
+                    ],
+                }
+                finish_reason = "tool_calls"
+            return ChatCompletionResponse(
+                id=f"offline_{uuid.uuid4().hex}",
+                choices=[
+                    {
+                        "index": 0,
+                        "message": message,
+                        "finish_reason": finish_reason,
+                    }
+                ],
+                usage=TokenUsage(
+                    prompt_tokens=16,
+                    completion_tokens=8,
+                    total_tokens=24,
+                ),
+                model=str(mapping.model_id),
+                provider=str(mapping.provider),
+            )
+
+        return invoke
+
+    def route_snapshot(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "route_id": "openai:offline-fixture",
+                "provider": "openai",
+                "auth_type": "none",
+                "region": "",
+                "allowed_models": ["escape-lab-fixture"],
+                "enabled": True,
+            }
+        ]
+
+    async def close(self) -> None:
+        return None
+
+
+def _offline_fixture_router(axonllm: Any, state: _FixtureState) -> Any:
+    """Construct AxonLLM's real router with an in-memory fixture transport."""
+
+    from src.gateway.health_tracker import ProviderHealthTracker
+    from src.gateway.model_registry import ModelRegistry
+    from src.gateway.request_validator import RequestValidator
+    from src.gateway.router import Router
+    from src.gateway.routing_runtime import RoutingRuntime
+
+    registry = ModelRegistry.from_config(
+        {
+            "models": [
+                {
+                    "name": "escape-lab-fixture",
+                    "description": "Escape Lab offline AxonLLM fixture",
+                    "capabilities": ["chat", "tools"],
+                    "routing_strategy": "round-robin",
+                    "providers": [
+                        {
+                            "provider": "openai",
+                            "model_id": "escape-lab-fixture",
+                            "fallback_order": 0,
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+    factory = _OfflineFixtureProviderFactory(state)
+    router = Router(
+        registry,
+        ProviderHealthTracker(),
+        max_retries=0,
+        base_delay=0.0,
+        cooldown_seconds=0,
+        available_providers=factory.available_providers,
+    )
+    validator = RequestValidator(registry)
+    runtime = RoutingRuntime(
+        router=router,
+        provider_factory=factory,
+        model_registry=registry,
+        validator=validator,
+        owns_provider_factory=True,
+    )
+    return axonllm.AsyncRouter(
+        router=router,
+        provider_factory=factory,
+        model_registry=registry,
+        validator=validator,
+        runtime=runtime,
+    )
+
+
 class AxonLLMAgentSession:
     def __init__(
         self,
@@ -395,6 +566,7 @@ class AxonLLMAgentSession:
         self._loop = asyncio.new_event_loop()
         self._temporary: tempfile.TemporaryDirectory[str] | None = None
         self._fixture: _FixtureServer | None = None
+        self._fixture_state: _FixtureState | None = None
         self._plan: _ReferencePlan | None = None
         self._pending_tool_call: dict[str, Any] | None = None
         self._turns = 0
@@ -408,22 +580,29 @@ class AxonLLMAgentSession:
             str(getattr(axonllm, "__version__", "unknown")),
         )
         if config.mode == "fixture":
-            self._fixture = _FixtureServer()
             self._plan = _ReferencePlan(scenario, seed=seed)
-            self._temporary = tempfile.TemporaryDirectory(
-                prefix="escape-lab-axonllm-"
-            )
-            models, providers = self._write_fixture_config(
-                Path(self._temporary.name),
-                self._fixture.base_url,
-            )
             model_name = "escape-lab-fixture"
-            self._router = axonllm.AsyncRouter.from_files(
-                models=models,
-                providers=providers,
-                enabled_providers={"openai"},
-                max_retries=0,
-            )
+            if config.fixture_transport == "offline":
+                self._fixture_state = _FixtureState()
+                self._router = _offline_fixture_router(
+                    axonllm,
+                    self._fixture_state,
+                )
+            else:
+                self._fixture = _FixtureServer()
+                self._temporary = tempfile.TemporaryDirectory(
+                    prefix="escape-lab-axonllm-"
+                )
+                models, providers = self._write_fixture_config(
+                    Path(self._temporary.name),
+                    self._fixture.base_url,
+                )
+                self._router = axonllm.AsyncRouter.from_files(
+                    models=models,
+                    providers=providers,
+                    enabled_providers={"openai"},
+                    max_retries=0,
+                )
         else:
             model_name = str(config.model)
             self._router = axonllm.AsyncRouter.from_files(
@@ -447,12 +626,31 @@ class AxonLLMAgentSession:
             "adapter": "axonllm",
             "version": self._axonllm_version,
             "provider": (
-                "loopback-fixture"
+                (
+                    "offline-fixture"
+                    if config.fixture_transport == "offline"
+                    else "loopback-fixture"
+                )
                 if config.mode == "fixture"
                 else config.preferred_provider or "router-selected"
             ),
             "model": model_name,
             "mode": config.mode,
+            "fixture_transport": (
+                config.fixture_transport
+                if config.mode == "fixture"
+                else None
+            ),
+            "network_required": (
+                config.mode == "live"
+                or config.fixture_transport == "loopback"
+            ),
+            "provider_auth": (
+                "none"
+                if config.mode == "fixture"
+                and config.fixture_transport == "offline"
+                else "configured"
+            ),
             "source_digest": source_digest,
             "route_snapshot": _safe_route_snapshot(
                 self._router.route_snapshot()
@@ -476,12 +674,10 @@ class AxonLLMAgentSession:
                 if isinstance(event, AgentSkip):
                     return event
                 if isinstance(event, AgentCompleted):
-                    assert self._fixture is not None
-                    self._fixture.state.set_action(tool_name=None)
+                    self._fixture_action(tool_name=None)
                     break
                 planned = event
-                assert self._fixture is not None
-                self._fixture.state.set_action(
+                self._fixture_action(
                     tool_name=_tool_name(event.action),
                     arguments=event.params,
                 )
@@ -638,6 +834,26 @@ class AxonLLMAgentSession:
             raise AgentAdapterError(
                 f"AxonLLM cleanup failed: {errors[0]}"
             ) from errors[0]
+
+    def _fixture_action(
+        self,
+        *,
+        tool_name: str | None,
+        arguments: dict[str, Any] | None = None,
+    ) -> None:
+        if self._fixture is not None:
+            self._fixture.state.set_action(
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+            return
+        if self._fixture_state is not None:
+            self._fixture_state.set_action(
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+            return
+        raise AgentAdapterError("AxonLLM fixture state is unavailable")
 
     def _import_axonllm(self, source: Path | None) -> Any:
         if source is not None:

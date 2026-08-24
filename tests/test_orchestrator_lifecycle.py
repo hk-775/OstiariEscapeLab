@@ -14,7 +14,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class _StartupFailingFactory:
-    def start(self, scenario: Scenario, *, seed: int) -> ScriptedAgentSession:
+    def start(
+        self,
+        scenario: Scenario,
+        *,
+        seed: int,
+        run_id: str,
+    ) -> ScriptedAgentSession:
+        del scenario, seed, run_id
         raise AgentAdapterError("synthetic adapter startup failure")
 
 
@@ -24,7 +31,14 @@ class _CloseFailingSession(ScriptedAgentSession):
 
 
 class _CloseFailingFactory:
-    def start(self, scenario: Scenario, *, seed: int) -> ScriptedAgentSession:
+    def start(
+        self,
+        scenario: Scenario,
+        *,
+        seed: int,
+        run_id: str,
+    ) -> ScriptedAgentSession:
+        del run_id
         return _CloseFailingSession(scenario, seed=seed)
 
 

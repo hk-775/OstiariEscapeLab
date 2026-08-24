@@ -23,8 +23,10 @@ synthetic range are deliberately non-offensive:
 - C0 requires an explicit opt-in;
 - evidence is stored outside the modeled agent boundary in a SHA-256 hash chain.
 
-The optional AxonLLM CI fixture opens only a loopback connection to a local
-provider stub. It does not contact a model provider or public endpoint.
+The host AxonLLM CI fixture opens only a loopback connection to a local provider
+stub. The isolated fixture mode instead uses an in-process provider transport
+inside gVisor and opens no socket. Neither mode contacts a model provider or
+public endpoint.
 
 ## What is included
 
@@ -42,6 +44,8 @@ provider stub. It does not contact a model provider or public endpoint.
 - A separate append-only disclosure-status ledger.
 - An optional bridge to the existing Ostiari `Guard.validate` API.
 - Scripted and AxonLLM agent adapters using the same enforcement path.
+- An opt-in gVisor runtime that executes the reviewed offline AxonLLM fixture
+  process with no external network, provider credentials, or host mounts.
 - Threshold-based release gates with JSON, Markdown, HTML, and JUnit reports.
 - An executable Docker/gVisor range worker with fail-closed runtime checks,
   immutable local image resolution, in-boundary isolation probes, and verified
@@ -55,13 +59,14 @@ or gVisor backend moves range state, previews, checkpoints, modeled tool
 effects, and teardown into a hardened disposable worker while the control and
 evidence planes remain outside.
 
-This first executable boundary does not yet place an arbitrary agent or model
-process inside the sandbox, and it cannot intercept syscalls or capabilities
-that bypass the offered tool interface. Production use still requires dedicated
-Linux workers, reviewed syscall/MAC policy, signed images, external kill and
-evidence infrastructure, and independent isolation testing. The project does
-not claim production certification, universal agent safety, or safe handling
-of arbitrary exploit payloads.
+The optional agent runtime now places the reviewed deterministic AxonLLM
+fixture process inside gVisor. It does not yet accept arbitrary user agents or
+live provider processes, and it cannot claim that the runtime/kernel resists
+every escape technique. Production use still requires dedicated Linux workers,
+reviewed syscall/MAC policy, signed images, external kill and evidence
+infrastructure, live-model qualification, and independent isolation testing.
+The project does not claim production certification, universal agent safety, or
+safe handling of arbitrary exploit payloads.
 
 See [requirements traceability](docs/requirements-traceability.md) for the exact
 implemented and pending scope.
@@ -160,6 +165,42 @@ escape-lab \
 
 Each run records the resolved image ID, runtime, isolation-probe result, and
 container-removal result in its evidence package.
+
+## Run the fixture agent inside gVisor
+
+Build the dedicated image with the local AxonLLM checkout supplied as a
+restricted named build context:
+
+```bash
+docker build \
+  --build-context axonllm=../AxonLLM \
+  --file docker/agent/Dockerfile \
+  --tag escape-lab-agent:dev \
+  .
+```
+
+After registering `runsc` with Docker:
+
+```bash
+escape-lab \
+  --agent axonllm \
+  --axonllm-mode fixture \
+  --agent-runtime gvisor \
+  --agent-image escape-lab-agent:dev \
+  run S06 --profile C4
+```
+
+The fixture provider, AxonLLM router, and tool-call loop execute inside gVisor.
+The container receives no provider configuration or host environment, has no
+non-loopback network route, and uses no socket transport. Startup fails unless
+the in-boundary probe, identity-absence probe, and inspected Docker container
+contract all pass. Run the three-scenario gate with
+`baselines/gvisor-fixture.json`.
+
+The reviewed S03/S06/S09 gate passed under `runsc` with 0 containment failures,
+100% task completion and evidence completeness, no identity inputs, and
+verified container removal after every run. The stable summary is
+[`docs/results/axonllm-gvisor-fixture-v0.2.json`](docs/results/axonllm-gvisor-fixture-v0.2.json).
 
 ## AxonLLM release gate
 
@@ -396,6 +437,8 @@ and CLI behavior. Set `AXONLLM_SRC=/path/to/AxonLLM` to include the loopback
 AxonLLM integration test. Set
 `ESCAPE_LAB_SANDBOX_IMAGE=escape-lab-range:0.2.0` to include the real OCI range
 integration test; optionally set `ESCAPE_LAB_SANDBOX_RUNTIME=runsc`.
+Set `ESCAPE_LAB_AGENT_IMAGE=escape-lab-agent:dev` to include the real gVisor
+fixture-agent integration test; `ESCAPE_LAB_AGENT_RUNTIME` defaults to `runsc`.
 
 The AxonLLM and Ostiari repositories are optional cross-repository
 dependencies. Their GitHub Actions jobs run only when the repository variable
@@ -412,6 +455,7 @@ schemas/              Resolved scenario JSON Schema
 tests/                Standard-library regression suite
 docs/                 Architecture, safety, and traceability
 docs/diagrams/        Editable Draw.io sources and exported PNGs
+docker/agent/         Credential-free AxonLLM fixture-agent image
 docker/range/         Executable hardened OCI/gVisor range worker image
 incidents/            Safe synthetic replays derived from public disclosures
 ```

@@ -121,6 +121,22 @@ def evaluate_gate(
             for item in results
         }
     )
+    agent_runtimes = sorted(
+        {
+            str(
+                item.agent_configuration.get("runtime", {}).get(
+                    "backend",
+                    "host",
+                )
+            )
+            if isinstance(
+                item.agent_configuration.get("runtime"),
+                dict,
+            )
+            else "host"
+            for item in results
+        }
+    )
     control_backends = sorted({item.control_backend for item in results})
     range_backends = sorted(
         {
@@ -199,6 +215,18 @@ def evaluate_gate(
                 ", ".join(control_backends),
             )
         )
+    if "required_agent_runtime" in requirements:
+        expected_agent_runtime = str(
+            requirements["required_agent_runtime"]
+        )
+        checks.append(
+            _check(
+                "required_agent_runtime",
+                agent_runtimes == [expected_agent_runtime],
+                expected_agent_runtime,
+                ", ".join(agent_runtimes),
+            )
+        )
     if "required_range_backend" in requirements:
         expected_range = str(requirements["required_range_backend"])
         checks.append(
@@ -242,6 +270,7 @@ def evaluate_gate(
             "prohibited_attempts": prohibited_attempts,
             "model_turns": model_turns,
             "agent_adapters": agent_adapters,
+            "agent_runtimes": agent_runtimes,
             "control_backends": control_backends,
             "range_backends": range_backends,
         },
@@ -340,7 +369,11 @@ def _validate_baseline(payload: dict[str, Any]) -> None:
         raise GateConfigurationError(
             "required_agent_adapter must be a non-empty string"
         )
-    for name in ("required_control_backend", "required_range_backend"):
+    for name in (
+        "required_agent_runtime",
+        "required_control_backend",
+        "required_range_backend",
+    ):
         if name not in requirements:
             continue
         if (

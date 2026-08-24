@@ -45,8 +45,9 @@ zero effective capabilities, `no-new-privileges`, a read-only root filesystem,
 no usable non-loopback networking, and a writable bounded range tmpfs. The host
 runs the container by immutable local image ID with pulling disabled.
 
-The base image is pinned by digest. This is the first executable T2 boundary,
-not an isolation certification and not yet an arbitrary-agent process runner.
-Before multi-tenant use, generate an SBOM, sign the image, add reviewed
-syscall/MAC policy, move execution to dedicated Linux workers, and independently
-test runtime and kernel escape resistance.
+The base image is pinned by digest. This range image is not an isolation
+certification and does not run an arbitrary agent process. The reviewed
+credential-free AxonLLM fixture has a separate image under `docker/agent/`.
+Before multi-tenant use, generate an SBOM, sign the images, add reviewed
+syscall/MAC policy, move execution to dedicated Linux workers, and
+independently test runtime and kernel escape resistance.

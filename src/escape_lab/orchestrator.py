@@ -135,14 +135,35 @@ class RunOrchestrator:
             validity = RunValidity.VALID
             terminated = False
             step_request_ids: dict[str, str] = {}
-            agent_session = self.agent_factory.start(scenario, seed=seed)
+            agent_session = self.agent_factory.start(
+                scenario,
+                seed=seed,
+                run_id=run_id,
+            )
             agent_configuration = redact(agent_session.metadata)
+            agent_runtime = agent_session.metadata.get("runtime", {})
+            agent_runtime_digest = (
+                str(agent_runtime.get("digest"))
+                if isinstance(agent_runtime, dict)
+                and agent_runtime.get("digest")
+                else None
+            )
+            environment_digest = execution_range.environment_digest
+            if agent_runtime_digest is not None:
+                environment_digest = sha256_json(
+                    {
+                        "range_environment_digest": (
+                            execution_range.environment_digest
+                        ),
+                        "agent_runtime_digest": agent_runtime_digest,
+                    }
+                )
 
             run_manifest = {
                 "run_id": run_id,
                 "scenario": scenario.data,
                 "scenario_digest": scenario.digest,
-                "environment_digest": execution_range.environment_digest,
+                "environment_digest": environment_digest,
                 "control_profile": profile.value,
                 "control_backend": self.control_backend,
                 "seed": seed,
@@ -162,7 +183,7 @@ class RunOrchestrator:
                     "scenario": scenario.scenario_id,
                     "scenario_version": scenario.version,
                     "scenario_digest": scenario.digest,
-                    "environment_digest": execution_range.environment_digest,
+                    "environment_digest": environment_digest,
                     "profile": profile.value,
                     "seed": seed,
                     "control_backend": self.control_backend,
@@ -550,6 +571,43 @@ class RunOrchestrator:
                     {"stage": "agent_adapter", "error": str(error)},
                 )
 
+            if getattr(
+                agent_session,
+                "requires_verified_teardown",
+                False,
+            ):
+                try:
+                    agent_session.close()
+                    agent_configuration = redact(agent_session.metadata)
+                    agent_teardown = getattr(
+                        agent_session,
+                        "teardown",
+                        {"complete": False},
+                    )
+                    evidence.record(
+                        "agent_teardown",
+                        agent_teardown,
+                    )
+                    if not bool(agent_teardown.get("complete")):
+                        validity = RunValidity.INVALID
+                        notes.append(
+                            "Isolated agent teardown was not verified"
+                        )
+                except Exception as error:
+                    validity = RunValidity.INVALID
+                    notes.append(
+                        f"Isolated agent teardown failed: {error}"
+                    )
+                    evidence.record(
+                        "infrastructure_error",
+                        {
+                            "stage": "agent_teardown",
+                            "error": str(error),
+                        },
+                    )
+                finally:
+                    agent_session = None
+
             evidence_hits = adjudicator.evaluate_evidence(
                 evidence.counts,
                 executed_actions=metrics.actions_executed,
@@ -608,7 +666,7 @@ class RunOrchestrator:
                 scenario_id=scenario.scenario_id,
                 scenario_version=scenario.version,
                 scenario_digest=scenario.digest,
-                environment_digest=execution_range.environment_digest,
+                environment_digest=environment_digest,
                 profile=profile,
                 seed=seed,
                 control_backend=self.control_backend,

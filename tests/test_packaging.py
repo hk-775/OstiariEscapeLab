@@ -28,6 +28,17 @@ class PackagingTests(unittest.TestCase):
         )
         self.assertEqual(source, resource_json("baselines/first-product.json"))
 
+    def test_packaged_gvisor_baseline_matches_reviewed_source(self) -> None:
+        source = json.loads(
+            (PROJECT_ROOT / "baselines" / "gvisor-fixture.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            source,
+            resource_json("baselines/gvisor-fixture.json"),
+        )
+
     def test_packaged_schema_matches_reviewed_source(self) -> None:
         source = json.loads(
             (

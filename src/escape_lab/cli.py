@@ -8,6 +8,10 @@ import shutil
 import sys
 from pathlib import Path
 
+from escape_lab.agent_sandbox import (
+    GVisorAgentConfig,
+    GVisorFixtureAgentFactory,
+)
 from escape_lab.agents import (
     AxonLLMAgentFactory,
     AxonLLMConfig,
@@ -128,6 +132,44 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=20,
         help="Maximum AxonLLM model turns per scenario",
+    )
+    parser.add_argument(
+        "--agent-runtime",
+        choices=["host", "gvisor"],
+        default="host",
+        help="Process boundary for the agent adapter",
+    )
+    parser.add_argument(
+        "--agent-image",
+        default=None,
+        help="OCI image containing AxonLLM and the offline fixture worker",
+    )
+    parser.add_argument(
+        "--agent-sandbox-runtime",
+        default="runsc",
+        help="Registered runsc runtime for --agent-runtime gvisor",
+    )
+    parser.add_argument(
+        "--agent-memory",
+        default="512m",
+        help="Memory limit for the isolated fixture agent",
+    )
+    parser.add_argument(
+        "--agent-cpus",
+        default="1.0",
+        help="CPU limit for the isolated fixture agent",
+    )
+    parser.add_argument(
+        "--agent-pids",
+        type=int,
+        default=64,
+        help="Process limit for the isolated fixture agent",
+    )
+    parser.add_argument(
+        "--agent-rpc-timeout",
+        type=float,
+        default=15.0,
+        help="Seconds before a non-responsive isolated agent is force-removed",
     )
     parser.add_argument(
         "--range-backend",
@@ -253,7 +295,34 @@ def _orchestrator(args: argparse.Namespace) -> tuple[Path, RunOrchestrator]:
         project_root,
         require_project_catalog=args.project_root is not None,
     )
-    if args.agent == "axonllm":
+    if args.agent_runtime == "gvisor":
+        if args.agent != "axonllm" or args.axonllm_mode != "fixture":
+            raise ValueError(
+                "gVisor agent runtime requires --agent axonllm "
+                "--axonllm-mode fixture"
+            )
+        if args.axonllm_src is not None:
+            raise ValueError(
+                "--axonllm-src cannot be mounted into the gVisor agent; "
+                "build AxonLLM into --agent-image"
+            )
+        if not args.agent_image:
+            raise ValueError(
+                "--agent-image is required for --agent-runtime gvisor"
+            )
+        agent_factory = GVisorFixtureAgentFactory(
+            GVisorAgentConfig(
+                image=args.agent_image,
+                runtime=args.agent_sandbox_runtime,
+                docker_binary=args.docker_binary,
+                memory=args.agent_memory,
+                cpus=args.agent_cpus,
+                pids_limit=args.agent_pids,
+                max_turns=args.max_agent_turns,
+                rpc_timeout_seconds=args.agent_rpc_timeout,
+            )
+        )
+    elif args.agent == "axonllm":
         agent_factory = AxonLLMAgentFactory(
             AxonLLMConfig(
                 source=args.axonllm_src,

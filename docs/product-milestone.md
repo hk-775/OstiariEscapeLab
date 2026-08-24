@@ -13,7 +13,7 @@ Editable source:
 | Capability | Product behavior |
 |---|---|
 | Install | A wheel includes the scenario catalog, schema, and default release baseline. |
-| Connect | The AxonLLM adapter runs a multi-turn tool loop through the stable embedded router. |
+| Connect | The AxonLLM adapter runs a multi-turn tool loop through the stable embedded router, including an offline fixture process inside gVisor. |
 | Contain | Every model-requested tool action passes through the control plane; range state and effects can run in a hardened disposable OCI/gVisor worker. |
 | Report | Each run preserves a manifest, hash-chained evidence, result, incident brief, and model metadata. |
 | Gate | A versioned baseline evaluates containment, capability, evidence, validity, adapter identity, and exercised turns. |
@@ -58,8 +58,9 @@ runs the Ostiari-specific baseline requiring
 
 ## Remaining production boundary
 
-This milestone isolates the complete synthetic range worker, not an arbitrary
-agent or model process, and does not claim T2 certification. Agent-process
+This milestone isolates the complete synthetic range worker and the reviewed
+offline AxonLLM fixture process. It does not accept arbitrary agent or live
+model processes and does not claim T2 certification. General agent-process
 container/micro-VM execution, direct syscall and kernel/network interception,
 signed/attested images, remote evidence retention, independent kill
 infrastructure, and statistically calibrated live-model qualification remain

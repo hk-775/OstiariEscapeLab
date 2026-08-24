@@ -10,6 +10,9 @@ COPIES = {
     PROJECT_ROOT / "baselines" / "first-product.json": (
         PACKAGE_DATA / "baselines" / "first-product.json"
     ),
+    PROJECT_ROOT / "baselines" / "gvisor-fixture.json": (
+        PACKAGE_DATA / "baselines" / "gvisor-fixture.json"
+    ),
     PROJECT_ROOT / "scenarios" / "catalog.json": (
         PACKAGE_DATA / "scenarios" / "catalog.json"
     ),

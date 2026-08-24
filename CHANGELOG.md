@@ -4,6 +4,14 @@ All notable user-visible changes are recorded here.
 
 ## Unreleased
 
+- Added a credential-free, socket-free AxonLLM fixture transport and a dedicated
+  gVisor agent worker with bounded RPC, identity-absence probes, immutable image
+  resolution, fail-closed runtime checks, and verified teardown.
+- Added an agent-runtime release-gate requirement, isolated-fixture baseline,
+  Docker image, CLI configuration, and real-runtime integration test.
+- Added dual in-boundary/Docker-contract attestation and a published
+  three-scenario runsc qualification result with zero agent network,
+  credentials, mounts, devices, or published ports.
 - Added a pluggable range-session interface and executable hardened
   Docker/gVisor worker for range state and modeled tool effects.
 - Added immutable local image resolution, runtime availability checks,

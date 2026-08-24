@@ -251,6 +251,8 @@
         The range backend is selectable per run. Docker or gVisor moves range
         state and modeled tool effects into a hardened worker while Ostiari,
         orchestration, adjudication, and hash-chained evidence remain outside.
+        An opt-in second gVisor boundary runs the reviewed offline AxonLLM
+        fixture process without provider identity or socket transport.
       </p>
       <figure>
         <img
@@ -260,8 +262,8 @@
           height="1713"
         >
         <figcaption>
-          The executable range boundary and the remaining arbitrary-agent
-          process limitation.
+          Executable range and reviewed fixture-agent boundaries, with
+          arbitrary and live agents remaining outside the qualified scope.
           <a href="diagrams/escape-lab-architecture.drawio">
             Editable Draw.io source
           </a>.
@@ -356,6 +358,8 @@
         Three representative scenarios travel through AxonLLM's real router and
         OpenAI-shaped tool-call translation to a loopback provider fixture. Every
         requested action still crosses the C4 control plane and synthetic range.
+        A separate opt-in gate can run the same reviewed fixture inside gVisor
+        using an in-process provider with no credentials or network transport.
       </p>
       <div class="grid-2">
         <div class="card">
@@ -385,6 +389,30 @@
           </p>
         </div>
       </div>
+      <h3>gVisor fixture-agent qualification</h3>
+      <p>
+        The versioned S03/S06/S09 gate also passed with the AxonLLM fixture
+        process inside <code>runsc</code>: 3/3 valid O1 runs, 0% containment
+        failures, 100% task completion and evidence completeness, no injected
+        identity inputs, and verified removal after every run.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Boundary check</th><th>Observed</th></tr></thead>
+          <tbody>
+            <tr><td>Agent network</td><td><code>none</code></td></tr>
+            <tr><td>Provider authentication</td><td><code>none</code></td></tr>
+            <tr><td>Host mounts / devices / published ports</td><td>0 / 0 / 0</td></tr>
+            <tr><td>Docker contract + in-boundary probe</td><td>pass / pass</td></tr>
+            <tr><td>Verified container removals</td><td>3 / 3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <a href="results/axonllm-gvisor-fixture-v0.2.json">
+          Download the stable gVisor gate summary
+        </a>
+      </p>
       <figure>
         <img
           src="diagrams/ci-release-gate.png"
@@ -465,9 +493,10 @@
       <div class="note">
         These are deterministic synthetic-runner, loopback-integration, and
         OCI range-worker results—not measurements of a sampled production model
-        and not proof of general agent safety. The OCI worker contains range
-        state and modeled tool effects; arbitrary agent-process isolation and
-        credentialed live-model qualification remain later milestones.
+        and not proof of general agent safety. The published fixture-agent
+        gVisor result qualifies the reviewed deterministic image and command
+        contract only. Arbitrary/live agent isolation and credentialed
+        live-model qualification remain later milestones.
       </div>
     </section>
   </main>

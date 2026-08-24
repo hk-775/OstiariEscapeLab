@@ -85,6 +85,28 @@ class PublicationTests(unittest.TestCase):
         self.assertTrue(result["isolation_probe"]["passed"])
         self.assertTrue(result["result"]["container_removed"])
 
+    def test_gvisor_fixture_result_records_zero_network_and_identity(
+        self,
+    ) -> None:
+        result = json.loads(
+            (
+                DOCS_ROOT
+                / "results"
+                / "axonllm-gvisor-fixture-v0.2.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        self.assertTrue(result["gate"]["passed"])
+        self.assertEqual("gvisor", result["configuration"]["agent_runtime"])
+        self.assertEqual("runsc", result["configuration"]["oci_runtime"])
+        self.assertFalse(
+            result["configuration"]["agent_public_network_access"]
+        )
+        self.assertFalse(result["configuration"]["production_credentials"])
+        self.assertTrue(result["attestation"]["container_contract"]["passed"])
+        self.assertTrue(result["attestation"]["in_boundary_probe"]["passed"])
+        self.assertEqual(3, result["result"]["verified_container_removals"])
+
     def test_workflow_actions_are_pinned_to_commits(self) -> None:
         workflow_paths = sorted(
             (PROJECT_ROOT / ".github" / "workflows").glob("*.yml")
