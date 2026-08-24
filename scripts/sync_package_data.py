@@ -13,6 +13,9 @@ COPIES = {
     PROJECT_ROOT / "baselines" / "gvisor-fixture.json": (
         PACKAGE_DATA / "baselines" / "gvisor-fixture.json"
     ),
+    PROJECT_ROOT / "baselines" / "gvisor-external.json": (
+        PACKAGE_DATA / "baselines" / "gvisor-external.json"
+    ),
     PROJECT_ROOT / "scenarios" / "catalog.json": (
         PACKAGE_DATA / "scenarios" / "catalog.json"
     ),

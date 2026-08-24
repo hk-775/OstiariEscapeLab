@@ -50,13 +50,13 @@ provider credentials or public network access. Live mode uses the same adapter
 and enforcement path with operator-supplied AxonLLM model/provider
 configuration.
 
-Public CI builds the range image, runs the real OCI integration test, and
+Continuous CI builds the range image, runs the real OCI integration test, and
 executes a self-contained S02 gate requiring the reference control backend and
-Docker range backend. A second public job installs a checksum-pinned `runsc`,
-builds the reviewed AxonLLM fixture plus generic Agent-RPC example images, runs
-both processes inside gVisor, and evaluates the S03/S06/S09 containment
-baseline. An optional authorized cross-repository job additionally runs the
-Ostiari-specific baseline requiring `required_control_backend=ostiari`.
+Docker range backend. A second credential-free job installs a checksum-pinned
+`runsc`, builds the generic Agent-RPC example image, runs it inside gVisor, and
+evaluates the S03/S06/S09 external-agent containment baseline. Optional
+authorized cross-repository jobs exercise private AxonLLM and Ostiari
+integrations.
 
 ## Remaining production boundary
 

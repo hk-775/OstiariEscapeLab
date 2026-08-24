@@ -13,9 +13,11 @@ All notable user-visible changes are recorded here.
 - Bounded host-side response and diagnostic buffering, disabled Docker
   container logging, enforced turn and swap limits outside the worker, and
   bound teardown to the exact created container ID.
-- Added a continuous public GitHub Actions gate that checksum-verifies and
-  installs pinned gVisor, runs both fixture and external Agent-RPC images under
-  `runsc`, evaluates the containment baseline, and uploads evidence.
+- Added a continuous credential-free GitHub Actions gate that
+  checksum-verifies and installs pinned gVisor, runs the external Agent-RPC
+  image under `runsc`, evaluates a self-contained containment baseline, and
+  uploads evidence. Private AxonLLM qualification remains an optional
+  authorized integration.
 - Added a credential-free, socket-free AxonLLM fixture transport and a dedicated
   gVisor agent worker with bounded RPC, identity-absence probes, immutable image
   resolution, fail-closed runtime checks, and verified teardown.

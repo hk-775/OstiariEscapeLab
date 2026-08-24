@@ -485,11 +485,11 @@ generic Agent-RPC integration test; `ESCAPE_LAB_AGENT_RUNTIME` defaults to
 `runsc`.
 
 The AxonLLM and Ostiari repositories are optional cross-repository
-dependencies. Public CI continuously installs a checksum-pinned `runsc`, builds
-the public pinned AxonLLM fixture and generic example images, runs both real
-gVisor integrations, and evaluates `baselines/gvisor-fixture.json`. The
-Ostiari-specific cross-repository job remains optional behind
-`ENABLE_PRIVATE_INTEGRATIONS=true`.
+dependencies. Continuous CI installs a checksum-pinned `runsc`, builds the
+self-contained generic Agent-RPC example image, runs it under real gVisor, and
+evaluates `baselines/gvisor-external.json` without credentials or access to
+another repository. AxonLLM and Ostiari cross-repository jobs remain optional
+behind `ENABLE_PRIVATE_INTEGRATIONS=true` and require explicit authorization.
 
 ## Project layout
 

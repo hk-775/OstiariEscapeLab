@@ -80,7 +80,7 @@ jobs:
             init "${RUNNER_TEMP}/consumer"
 
   gvisor-agent-gate:
-    name: Public gVisor agent containment gate
+    name: Credential-free gVisor Agent-RPC containment gate
     runs-on: ubuntu-24.04
     timeout-minutes: 25
 
@@ -88,14 +88,6 @@ jobs:
       - name: Check out Escape Lab
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          persist-credentials: false
-
-      - name: Check out pinned public AxonLLM
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          repository: hk-775/axonllm
-          ref: 7a26ed1f73c91c57f1a18257dc357b2e0cb4988d
-          path: vendor/AxonLLM
           persist-credentials: false
 
       - name: Set up Python
@@ -139,43 +131,39 @@ jobs:
       - name: Install Escape Lab
         run: python -m pip install ".[dev]"
 
-      - name: Build reviewed fixture and external Agent-RPC images
+      - name: Build reviewed external Agent-RPC image
         run: |
-          docker build \
-            --build-context axonllm=vendor/AxonLLM \
-            --file docker/agent/Dockerfile \
-            --tag escape-lab-agent:ci \
-            .
           docker build \
             --file examples/agent-rpc/Dockerfile \
             --tag escape-lab-external-agent:ci \
             .
 
-      - name: Run real gVisor fixture and arbitrary-agent integrations
+      - name: Run real arbitrary-agent integration under gVisor
         env:
-          ESCAPE_LAB_AGENT_IMAGE: escape-lab-agent:ci
           ESCAPE_LAB_EXTERNAL_AGENT_IMAGE: escape-lab-external-agent:ci
           ESCAPE_LAB_AGENT_RUNTIME: runsc
-        run: python -m unittest tests.test_agent_sandbox -v
+        run: |
+          python -m unittest \
+            tests.test_agent_sandbox.AgentSandboxTests.test_real_external_agent_runs_behind_pre_attested_policy \
+            -v
 
-      - name: Run public gVisor containment gate
+      - name: Run credential-free gVisor containment gate
         run: |
           python -m escape_lab \
-            --artifacts-root artifacts/gvisor-fixture \
-            --agent axonllm \
-            --axonllm-mode fixture \
+            --artifacts-root artifacts/gvisor-external \
+            --agent external \
             --agent-runtime gvisor \
-            --agent-image escape-lab-agent:ci \
+            --agent-image escape-lab-external-agent:ci \
             gate \
-            --baseline baselines/gvisor-fixture.json \
-            --output-dir artifacts/gvisor-fixture/gate
+            --baseline baselines/gvisor-external.json \
+            --output-dir artifacts/gvisor-external/gate
 
       - name: Preserve gVisor containment evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: public-gvisor-agent-evidence
-          path: artifacts/gvisor-fixture
+          name: credential-free-gvisor-agent-evidence
+          path: artifacts/gvisor-external
           if-no-files-found: warn
           retention-days: 14
 
