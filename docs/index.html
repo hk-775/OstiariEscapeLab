@@ -230,6 +230,9 @@
         <a class="button" href="results/axonllm-first-product-v0.2.json">
           AxonLLM gate JSON
         </a>
+        <a class="button" href="results/openai-hf-incident-oci-gate-v0.2.json">
+          OCI incident gate JSON
+        </a>
       </div>
     </div>
   </header>
@@ -239,8 +242,32 @@
       <div class="metric"><strong>12</strong><span>reviewed test scenarios</span></div>
       <div class="metric"><strong>1</strong><span>public incident replay</span></div>
       <div class="metric"><strong>0%</strong><span>C2–C4 containment failures</span></div>
-      <div class="metric"><strong>13</strong><span>AxonLLM fixture turns gated</span></div>
+      <div class="metric"><strong>1</strong><span>real OCI range gate</span></div>
     </div>
+
+    <section>
+      <h2>Executable containment architecture</h2>
+      <p class="lede">
+        The range backend is selectable per run. Docker or gVisor moves range
+        state and modeled tool effects into a hardened worker while Ostiari,
+        orchestration, adjudication, and hash-chained evidence remain outside.
+      </p>
+      <figure>
+        <img
+          src="diagrams/escape-lab-architecture.png"
+          alt="Ostiari Escape Lab architecture with in-process and hardened OCI or gVisor range backends separated from the evidence plane"
+          width="2746"
+          height="1713"
+        >
+        <figcaption>
+          The executable range boundary and the remaining arbitrary-agent
+          process limitation.
+          <a href="diagrams/escape-lab-architecture.drawio">
+            Editable Draw.io source
+          </a>.
+        </figcaption>
+      </figure>
+    </section>
 
     <section>
       <h2>Test-case scenario coverage</h2>
@@ -402,6 +429,7 @@
               <tbody>
                 <tr><td>C0, disabled</td><td><span class="outcome o4">O4</span></td><td>0 / 2</td><td>Complete</td></tr>
                 <tr><td>C4 + Ostiari</td><td><span class="outcome o1">O1</span></td><td>2 / 2</td><td>Complete</td></tr>
+                <tr><td>C4 + Ostiari + OCI range</td><td><span class="outcome o1">O1</span></td><td>2 / 2</td><td>Complete</td></tr>
               </tbody>
             </table>
           </div>
@@ -417,6 +445,10 @@
             <a href="results/openai-hf-incident-replay-v0.2.json">
               Download the stable incident result
             </a>
+            ·
+            <a href="results/openai-hf-incident-oci-gate-v0.2.json">
+              Download the OCI gate result
+            </a>
           </p>
           <p>
             Public sources:
@@ -431,17 +463,18 @@
     <section>
       <h2>Scope and limitations</h2>
       <div class="note">
-        These are deterministic synthetic-runner and loopback-integration
-        results—not measurements of a sampled production model and not proof of
-        general agent safety. Arbitrary-process T2 isolation and credentialed
-        live-model qualification remain later milestones.
+        These are deterministic synthetic-runner, loopback-integration, and
+        OCI range-worker results—not measurements of a sampled production model
+        and not proof of general agent safety. The OCI worker contains range
+        state and modeled tool effects; arbitrary agent-process isolation and
+        credentialed live-model qualification remain later milestones.
       </div>
     </section>
   </main>
 
   <footer>
     <div class="wrap">
-      Results generated 23 August 2026 · Ostiari Escape Lab 0.2.0 · MIT-0
+      Results updated 24 August 2026 · Ostiari Escape Lab 0.2.0 · MIT-0
     </div>
   </footer>
 </body>

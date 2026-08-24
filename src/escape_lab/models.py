@@ -188,6 +188,7 @@ class RunResult:
     completed_at: str
     artifact_dir: Path
     agent_configuration: dict[str, Any] = field(default_factory=dict)
+    range_configuration: dict[str, Any] = field(default_factory=dict)
     disclosure_status: str = "private"
     attribution: str = "confirmed"
     notes: list[str] = field(default_factory=list)

@@ -121,6 +121,13 @@ def evaluate_gate(
             for item in results
         }
     )
+    control_backends = sorted({item.control_backend for item in results})
+    range_backends = sorted(
+        {
+            str(item.range_configuration.get("backend", "unknown"))
+            for item in results
+        }
+    )
     maximum_outcome = max(
         (item.outcome for item in valid),
         key=lambda value: value.rank,
@@ -182,6 +189,26 @@ def evaluate_gate(
             model_turns,
         ),
     ]
+    if "required_control_backend" in requirements:
+        expected_control = str(requirements["required_control_backend"])
+        checks.append(
+            _check(
+                "required_control_backend",
+                control_backends == [expected_control],
+                expected_control,
+                ", ".join(control_backends),
+            )
+        )
+    if "required_range_backend" in requirements:
+        expected_range = str(requirements["required_range_backend"])
+        checks.append(
+            _check(
+                "required_range_backend",
+                range_backends == [expected_range],
+                expected_range,
+                ", ".join(range_backends),
+            )
+        )
     passed = all(check["passed"] for check in checks)
     reasons = [
         (
@@ -215,6 +242,8 @@ def evaluate_gate(
             "prohibited_attempts": prohibited_attempts,
             "model_turns": model_turns,
             "agent_adapters": agent_adapters,
+            "control_backends": control_backends,
+            "range_backends": range_backends,
         },
         "configuration": {
             "scenarios": baseline["scenarios"],
@@ -234,12 +263,14 @@ def evaluate_gate(
                 "profile": item.profile.value,
                 "outcome": item.outcome.value,
                 "validity": item.validity.value,
+                "control_backend": item.control_backend,
                 "task_completed": item.metrics.task_completed,
                 "evidence_complete": item.metrics.evidence_complete,
                 "prohibited_attempts": item.metrics.prohibited_attempts,
                 "model_turns": item.metrics.model_turns,
                 "model_tokens": item.metrics.model_tokens,
                 "agent": item.agent_configuration,
+                "range": item.range_configuration,
                 "artifact_dir": str(item.artifact_dir),
             }
             for item in results
@@ -309,6 +340,14 @@ def _validate_baseline(payload: dict[str, Any]) -> None:
         raise GateConfigurationError(
             "required_agent_adapter must be a non-empty string"
         )
+    for name in ("required_control_backend", "required_range_backend"):
+        if name not in requirements:
+            continue
+        if (
+            not isinstance(requirements[name], str)
+            or not requirements[name].strip()
+        ):
+            raise GateConfigurationError(f"{name} must be a non-empty string")
     for name in (
         "maximum_containment_failure_rate",
         "minimum_task_completion_rate",
@@ -380,13 +419,18 @@ def _markdown_report(report: dict[str, Any]) -> str:
             "",
             "## Runs",
             "",
-            "| Scenario | Outcome | Validity | Task | Evidence | Model turns |",
-            "|---|---:|---|---|---|---:|",
+            (
+                "| Scenario | Outcome | Validity | Control | Range | "
+                "Task | Evidence | Model turns |"
+            ),
+            "|---|---:|---|---|---|---|---|---:|",
         ]
     )
     for run in report["runs"]:
         lines.append(
             f"| {run['scenario']} | {run['outcome']} | {run['validity']} | "
+            f"{run['control_backend']} | "
+            f"{run['range'].get('backend', 'unknown')} | "
             f"{'complete' if run['task_completed'] else 'incomplete'} | "
             f"{'complete' if run['evidence_complete'] else 'incomplete'} | "
             f"{run['model_turns']} |"
@@ -417,6 +461,8 @@ def _html_report(report: dict[str, Any]) -> str:
             f"<td>{html.escape(str(run['scenario']))}</td>"
             f"<td>{html.escape(str(run['outcome']))}</td>"
             f"<td>{html.escape(str(run['validity']))}</td>"
+            f"<td>{html.escape(str(run['control_backend']))}</td>"
+            f"<td>{html.escape(str(run['range'].get('backend', 'unknown')))}</td>"
             f"<td>{'yes' if run['task_completed'] else 'no'}</td>"
             f"<td>{'yes' if run['evidence_complete'] else 'no'}</td>"
             f"<td>{run['model_turns']}</td>"
@@ -466,8 +512,9 @@ def _html_report(report: dict[str, Any]) -> str:
   <table>
     <thead>
       <tr>
-        <th>Scenario</th><th>Outcome</th><th>Validity</th>
-        <th>Task complete</th><th>Evidence complete</th><th>Model turns</th>
+        <th>Scenario</th><th>Outcome</th><th>Validity</th><th>Control</th>
+        <th>Range</th><th>Task complete</th><th>Evidence complete</th>
+        <th>Model turns</th>
       </tr>
     </thead>
     <tbody>{run_rows}</tbody>

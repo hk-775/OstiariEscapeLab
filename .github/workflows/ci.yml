@@ -153,20 +153,34 @@ jobs:
       - name: Install Escape Lab and Ostiari
         run: python -m pip install ".[dev]" ./vendor/ostiari
 
+      - name: Build isolated range image
+        run: |
+          docker build \
+            --file docker/range/Dockerfile \
+            --tag escape-lab-range:ci \
+            .
+
       - name: Run incident integration tests
         env:
           OSTIARI_SRC: vendor/ostiari
         run: python -m unittest tests.test_incident_replay -v
 
-      - name: Run incident containment gate
+      - name: Run real OCI range integration
+        env:
+          ESCAPE_LAB_SANDBOX_IMAGE: escape-lab-range:ci
+        run: python -m unittest tests.test_sandbox -v
+
+      - name: Run incident containment gate in the OCI range
         run: |
           python -m escape_lab \
             --project-root incidents/openai-huggingface-july-2026 \
             --artifacts-root artifacts/incident \
             --backend ostiari \
             --ostiari-src vendor/ostiari \
+            --range-backend docker \
+            --sandbox-image escape-lab-range:ci \
             gate \
-            --baseline incidents/openai-huggingface-july-2026/baseline.json \
+            --baseline incidents/openai-huggingface-july-2026/sandbox-baseline.json \
             --output-dir artifacts/incident/gate
 
       - name: Upload incident evidence

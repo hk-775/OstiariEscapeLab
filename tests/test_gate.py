@@ -79,6 +79,26 @@ class GateTests(unittest.TestCase):
         self.assertTrue((first.output_dir / "gate.json").is_file())
         self.assertTrue((second.output_dir / "gate.json").is_file())
 
+    def test_gate_can_require_control_and_range_backends(self) -> None:
+        baseline = self._scripted_baseline()
+        baseline["requirements"]["required_control_backend"] = "reference"
+        baseline["requirements"]["required_range_backend"] = "synthetic"
+        output = Path(self.temporary.name) / "backend-gate"
+
+        result = run_gate(
+            self.orchestrator,
+            baseline,
+            output_dir=output,
+        )
+
+        self.assertTrue(result.passed)
+        checks = {
+            check["name"]: check
+            for check in result.report["checks"]
+        }
+        self.assertTrue(checks["required_control_backend"]["passed"])
+        self.assertTrue(checks["required_range_backend"]["passed"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,7 +14,7 @@ Editable source:
 |---|---|
 | Install | A wheel includes the scenario catalog, schema, and default release baseline. |
 | Connect | The AxonLLM adapter runs a multi-turn tool loop through the stable embedded router. |
-| Contain | Every model-requested action passes through the existing control plane and synthetic range. |
+| Contain | Every model-requested tool action passes through the control plane; range state and effects can run in a hardened disposable OCI/gVisor worker. |
 | Report | Each run preserves a manifest, hash-chained evidence, result, incident brief, and model metadata. |
 | Gate | A versioned baseline evaluates containment, capability, evidence, validity, adapter identity, and exercised turns. |
 | Integrate | GitHub Actions receives a non-zero exit for regression and uploads JSON, Markdown, HTML, JUnit, and run evidence. |
@@ -50,9 +50,15 @@ provider credentials or public network access. Live mode uses the same adapter
 and enforcement path with operator-supplied AxonLLM model/provider
 configuration.
 
+The incident CI job also builds the range image, runs the real OCI integration
+test, and executes the S02 incident gate with both
+`required_control_backend=ostiari` and `required_range_backend=docker`.
+
 ## Remaining production boundary
 
-This milestone does not execute arbitrary agent processes or claim T2
-certification. Independently reviewed container or micro-VM workers,
-kernel/network interception, remote evidence retention, and statistically
-calibrated live-model qualification remain later product milestones.
+This milestone isolates the complete synthetic range worker, not an arbitrary
+agent or model process, and does not claim T2 certification. Agent-process
+container/micro-VM execution, direct syscall and kernel/network interception,
+signed/attested images, remote evidence retention, independent kill
+infrastructure, and statistically calibrated live-model qualification remain
+later product milestones.

@@ -38,7 +38,7 @@ scenario steps directly. Two adapters currently implement it:
 The AxonLLM fixture mode sends requests through AxonLLM's real router and
 OpenAI-shaped tool translation to a loopback-only provider stub. Live mode uses
 customer-supplied AxonLLM model/provider configuration. Both modes execute tools
-only through the same Escape Lab control and synthetic-range boundary.
+only through the same Escape Lab control and selected range boundary.
 
 ## Run orchestrator
 
@@ -67,16 +67,30 @@ The optional Ostiari bridge contributes the current Ostiari Guard tier and score
 to C2–C4 decisions. Escape Lab retains its independent state assertions because
 runtime intent signals do not establish whether a prohibited outcome occurred.
 
-## Synthetic range
+## Range backends
 
-The default range is an in-memory state machine with a disposable metadata
+The orchestrator consumes a range-session protocol and records the selected
+backend in every manifest and result.
+
+The default backend is an in-memory state machine with a disposable metadata
 directory. It models files, services, identities, credentials, processes,
-network routes, approvals, telemetry, and protected effects. It does not execute
-scenario command strings or use sockets.
+network routes, approvals, telemetry, and protected effects. It does not
+execute scenario command strings or use sockets.
 
 Every action supports a side-effect-free preview used by controls before the
 state transition. The range can checkpoint and restore state, and teardown
 removes its explicitly bounded root.
+
+The Docker/gVisor backend starts the same complete range state machine in a
+separate worker over a JSON-line control channel. The host resolves the image to
+an immutable local ID, disables pulling, applies no-network/read-only/non-root
+hardening and resource limits, and requires an in-boundary isolation probe to
+pass before the run begins. RPC timeouts force-remove the worker; normal
+teardown verifies container removal. The host-side agent adapter, orchestrator,
+control plane, adjudicator, and evidence store remain outside the worker.
+
+This boundary contains the modeled tool effects but does not yet isolate an
+arbitrary agent process or intercept direct syscalls outside the tool protocol.
 
 ## Evidence pipeline
 
