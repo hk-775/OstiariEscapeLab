@@ -4,6 +4,18 @@ All notable user-visible changes are recorded here.
 
 ## Unreleased
 
+- Added the generic `external-agent-rpc` adapter, documented
+  `ostiari-agent-rpc-v1`, and a dependency-free example image for arbitrary
+  local agent/model processes.
+- Changed the gVisor agent lifecycle to create, inspect, and attest the stopped
+  container before execution. The contract now records explicit syscall,
+  filesystem, egress, and identity enforcement domains.
+- Bounded host-side response and diagnostic buffering, disabled Docker
+  container logging, enforced turn and swap limits outside the worker, and
+  bound teardown to the exact created container ID.
+- Added a continuous public GitHub Actions gate that checksum-verifies and
+  installs pinned gVisor, runs both fixture and external Agent-RPC images under
+  `runsc`, evaluates the containment baseline, and uploads evidence.
 - Added a credential-free, socket-free AxonLLM fixture transport and a dedicated
   gVisor agent worker with bounded RPC, identity-absence probes, immutable image
   resolution, fail-closed runtime checks, and verified teardown.
@@ -20,8 +32,8 @@ All notable user-visible changes are recorded here.
 - Added release-gate requirements for control and range backends, real OCI
   integration tests, and an OCI-backed incident regression in CI.
 - Updated the architecture diagram, safety case, product boundary, and
-  requirements traceability to distinguish range isolation from pending
-  arbitrary-agent process isolation.
+  requirements traceability for arbitrary Agent-RPC process isolation and the
+  remaining credentialed-inference and independent-certification boundary.
 
 ## 0.2.0 - 2026-08-23
 

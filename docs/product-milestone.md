@@ -13,8 +13,8 @@ Editable source:
 | Capability | Product behavior |
 |---|---|
 | Install | A wheel includes the scenario catalog, schema, and default release baseline. |
-| Connect | The AxonLLM adapter runs a multi-turn tool loop through the stable embedded router, including an offline fixture process inside gVisor. |
-| Contain | Every model-requested tool action passes through the control plane; range state and effects can run in a hardened disposable OCI/gVisor worker. |
+| Connect | AxonLLM and arbitrary OCI Agent-RPC adapters run multi-turn tool loops through one bounded session contract. |
+| Contain | Every proposed tool action passes through the control plane; the actual Agent-RPC process and range effects can run in separate hardened gVisor workers. |
 | Report | Each run preserves a manifest, hash-chained evidence, result, incident brief, and model metadata. |
 | Gate | A versioned baseline evaluates containment, capability, evidence, validity, adapter identity, and exercised turns. |
 | Integrate | GitHub Actions receives a non-zero exit for regression and uploads JSON, Markdown, HTML, JUnit, and run evidence. |
@@ -52,16 +52,23 @@ configuration.
 
 Public CI builds the range image, runs the real OCI integration test, and
 executes a self-contained S02 gate requiring the reference control backend and
-Docker range backend. An optional authorized cross-repository job additionally
-runs the Ostiari-specific baseline requiring
-`required_control_backend=ostiari`.
+Docker range backend. A second public job installs a checksum-pinned `runsc`,
+builds the reviewed AxonLLM fixture plus generic Agent-RPC example images, runs
+both processes inside gVisor, and evaluates the S03/S06/S09 containment
+baseline. An optional authorized cross-repository job additionally runs the
+Ostiari-specific baseline requiring `required_control_backend=ostiari`.
 
 ## Remaining production boundary
 
-This milestone isolates the complete synthetic range worker and the reviewed
-offline AxonLLM fixture process. It does not accept arbitrary agent or live
-model processes and does not claim T2 certification. General agent-process
-container/micro-VM execution, direct syscall and kernel/network interception,
-signed/attested images, remote evidence retention, independent kill
-infrastructure, and statistically calibrated live-model qualification remain
-later product milestones.
+This milestone isolates the complete synthetic range worker, the reviewed
+offline AxonLLM fixture, and arbitrary OCI Agent-RPC processes. External images
+start only after stopped-container attestation verifies gVisor syscall
+mediation, zero egress, a read-only/no-mount filesystem, non-root execution,
+zero capabilities, exact resource/swap limits, disabled container logging,
+host-enforced turn/RPC bounds, and ID-bound teardown.
+
+It does not claim T2 certification or provide direct credentialed remote-model
+access. A reviewed inference broker, signed/attested images, optional micro-VM
+execution, remote evidence retention, independent kill infrastructure,
+external security assessment, and statistically calibrated live-model
+qualification remain later product milestones.

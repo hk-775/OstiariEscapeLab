@@ -242,7 +242,7 @@
       <div class="metric"><strong>12</strong><span>reviewed test scenarios</span></div>
       <div class="metric"><strong>1</strong><span>public incident replay</span></div>
       <div class="metric"><strong>0%</strong><span>C2–C4 containment failures</span></div>
-      <div class="metric"><strong>1</strong><span>real OCI range gate</span></div>
+      <div class="metric"><strong>2</strong><span>public runtime gates</span></div>
     </div>
 
     <section>
@@ -251,8 +251,9 @@
         The range backend is selectable per run. Docker or gVisor moves range
         state and modeled tool effects into a hardened worker while Ostiari,
         orchestration, adjudication, and hash-chained evidence remain outside.
-        An opt-in second gVisor boundary runs the reviewed offline AxonLLM
-        fixture process without provider identity or socket transport.
+        A second gVisor boundary runs either the reviewed offline AxonLLM
+        fixture or an arbitrary OCI Agent-RPC process without provider identity,
+        host mounts, or network egress.
       </p>
       <figure>
         <img
@@ -262,8 +263,9 @@
           height="1713"
         >
         <figcaption>
-          Executable range and reviewed fixture-agent boundaries, with
-          arbitrary and live agents remaining outside the qualified scope.
+          Executable range and Agent-RPC process boundaries. Credentialed
+          remote inference and independent runtime certification remain
+          outside the qualified scope.
           <a href="diagrams/escape-lab-architecture.drawio">
             Editable Draw.io source
           </a>.
@@ -358,8 +360,8 @@
         Three representative scenarios travel through AxonLLM's real router and
         OpenAI-shaped tool-call translation to a loopback provider fixture. Every
         requested action still crosses the C4 control plane and synthetic range.
-        A separate opt-in gate can run the same reviewed fixture inside gVisor
-        using an in-process provider with no credentials or network transport.
+        A public gate runs the same reviewed fixture inside gVisor using an
+        in-process provider with no credentials or network transport.
       </p>
       <div class="grid-2">
         <div class="card">
@@ -411,6 +413,36 @@
       <p>
         <a href="results/axonllm-gvisor-fixture-v0.2.json">
           Download the stable gVisor gate summary
+        </a>
+      </p>
+      <h3>Arbitrary Agent-RPC image</h3>
+      <p>
+        The same boundary now accepts any OCI image that implements
+        <code>ostiari-agent-rpc-v1</code>. Docker creates the container in a
+        stopped state; Escape Lab verifies the immutable image, command,
+        <code>runsc</code> runtime, private namespaces, zero egress,
+        read-only/no-mount filesystem, non-root identity, zero capabilities,
+        disabled container logging, and exact resource/swap limits before
+        execution. Host-enforced turn and RPC bounds remain outside the
+        untrusted worker, and cleanup uses the exact created container ID.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Enforcement domain</th><th>Mechanism</th></tr></thead>
+          <tbody>
+            <tr><td>Syscalls</td><td>gVisor Sentry + zero capabilities + no-new-privileges</td></tr>
+            <tr><td>Filesystem</td><td>Read-only root; bounded hardened <code>/range</code> and <code>/tmp</code></td></tr>
+            <tr><td>Egress</td><td><code>NetworkMode=none</code>; no published ports</td></tr>
+            <tr><td>Identity</td><td>No host environment, mounts, devices, or recognized provider keys</td></tr>
+            <tr><td>Host I/O</td><td>Bounded RPC/diagnostics; Docker logging disabled</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <a href="agent-rpc.html">Read the Agent-RPC protocol</a>
+        ·
+        <a href="https://github.com/hk-775/OstiariEscapeLab/tree/main/examples/agent-rpc">
+          View the runnable example
         </a>
       </p>
       <figure>
@@ -493,10 +525,11 @@
       <div class="note">
         These are deterministic synthetic-runner, loopback-integration, and
         OCI range-worker results—not measurements of a sampled production model
-        and not proof of general agent safety. The published fixture-agent
-        gVisor result qualifies the reviewed deterministic image and command
-        contract only. Arbitrary/live agent isolation and credentialed
-        live-model qualification remain later milestones.
+        and not proof of general agent safety. Arbitrary Agent-RPC images are
+        now supported by the same fail-closed gVisor contract, but each image
+        remains a supply-chain trust input. Credentialed remote inference,
+        live-model statistical qualification, micro-VM support, and independent
+        runtime/kernel assessment remain later milestones.
       </div>
     </section>
   </main>

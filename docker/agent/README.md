@@ -26,7 +26,7 @@ PYTHONPATH=src python3.12 -m escape_lab \
   run S06 --profile C4
 ```
 
-The host launches the image by immutable image ID with:
+The host creates the image by immutable image ID with:
 
 - `--runtime runsc`;
 - `--network none` and `--ipc none`;
@@ -41,6 +41,10 @@ the provider transport is offline, and common provider/cloud identity
 environment variables and files are absent. The host force-removes the exact
 container on timeout or protocol failure and records verified teardown.
 
-This qualifies the reviewed deterministic AxonLLM fixture process. It does not
-yet qualify arbitrary user agents, live provider access, hostile native code,
-or the underlying runtime/kernel against every escape technique.
+The container remains stopped until Docker's effective runtime, image, command,
+network, namespace, mount, privilege, identity-input, and limit fields pass.
+This qualifies the reviewed deterministic AxonLLM fixture process. Arbitrary
+images use the same boundary through
+[`ostiari-agent-rpc-v1`](../../docs/agent-rpc.md), but image provenance,
+credentialed remote-provider access, hostile native code, and the underlying
+runtime/kernel still require separate qualification.

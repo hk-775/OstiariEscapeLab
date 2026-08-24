@@ -1,5 +1,5 @@
-<mxfile host="app.diagrams.net" modified="2026-08-24T01:35:00.000Z" agent="Codex" version="29.7.9" type="device">
-  <diagram id="escape-lab-architecture-v3" name="System Architecture">
+<mxfile host="app.diagrams.net" modified="2026-08-24T02:35:00.000Z" agent="Codex" version="29.7.9" type="device">
+  <diagram id="escape-lab-architecture-v4" name="System Architecture">
     <mxGraphModel dx="1480" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1480" pageHeight="1000" math="0" shadow="0" adaptiveColors="auto">
       <root>
         <mxCell id="0"/>
@@ -16,7 +16,7 @@
         <mxCell id="scenario_registry" value="&lt;b&gt;Scenario Registry&lt;/b&gt;&lt;br&gt;12 versioned S01–S12 contracts&lt;br&gt;manifest digest + assertions" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;fontSize=12;" vertex="1" parent="inputs">
           <mxGeometry x="45" y="70" width="170" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="agent_adapter" value="&lt;b&gt;Agent Adapter&lt;/b&gt;&lt;br&gt;scripted + AxonLLM&lt;br&gt;host, gVisor fixture, or live" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;fontSize=12;" vertex="1" parent="inputs">
+        <mxCell id="agent_adapter" value="&lt;b&gt;Agent Adapter&lt;/b&gt;&lt;br&gt;scripted + AxonLLM + external RPC&lt;br&gt;host or gVisor process boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;fontSize=12;" vertex="1" parent="inputs">
           <mxGeometry x="45" y="210" width="170" height="85" as="geometry"/>
         </mxCell>
         <mxCell id="operator_cli" value="&lt;b&gt;Operator + CLI&lt;/b&gt;&lt;br&gt;run, compare, replay&lt;br&gt;budgets + kill switch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;fontSize=12;" vertex="1" parent="inputs">
@@ -43,7 +43,7 @@
         <mxCell id="range_adapter" value="&lt;b&gt;Range Backend Adapter&lt;/b&gt;&lt;br&gt;selected per run&lt;br&gt;runtime identity recorded" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;fontSize=12;" vertex="1" parent="execution">
           <mxGeometry x="45" y="345" width="200" height="75" as="geometry"/>
         </mxCell>
-        <mxCell id="isolated_agent" value="&lt;b&gt;gVisor Fixture-Agent Worker&lt;/b&gt;&lt;br&gt;AxonLLM + in-process provider&lt;br&gt;network none · auth none · non-root&lt;br&gt;bounded RPC + dual attestation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontSize=11;" vertex="1" parent="execution">
+        <mxCell id="isolated_agent" value="&lt;b&gt;gVisor Agent-RPC Worker&lt;/b&gt;&lt;br&gt;fixture or arbitrary OCI image&lt;br&gt;create → attest → start&lt;br&gt;syscall · filesystem · egress policy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontSize=11;" vertex="1" parent="execution">
           <mxGeometry x="350" y="345" width="210" height="100" as="geometry"/>
         </mxCell>
         <mxCell id="synthetic_range" value="&lt;b&gt;In-Process Synthetic Range&lt;/b&gt;&lt;br&gt;deterministic T0/T1 state machine&lt;br&gt;&lt;i&gt;no shell or sockets&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=11;" vertex="1" parent="execution">
@@ -97,7 +97,7 @@
         <mxCell id="edge_control_range" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#d79b00;strokeWidth=2;fontSize=11;" edge="1" parent="execution" source="control_plane" target="range_adapter">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="edge_orchestrator_isolated_agent" value="bounded RPC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=10;" edge="1" parent="execution" source="orchestrator" target="isolated_agent">
+        <mxCell id="edge_orchestrator_agent_rpc_v2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=10;" edge="1" parent="execution" source="orchestrator" target="isolated_agent">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="edge_adapter_synthetic" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#9673a6;fontSize=11;" edge="1" parent="execution" source="range_adapter" target="synthetic_range">
@@ -138,7 +138,7 @@
         <mxCell id="legend" value="&lt;b&gt;Legend:&lt;/b&gt; solid arrows = execution/control flow    &lt;font color=&quot;#1a73e8&quot;&gt;dashed blue arrows = out-of-band evidence flow&lt;/font&gt;    dashed component = optional integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#9ca3af;fontSize=12;align=center;" vertex="1" parent="1">
           <mxGeometry x="350" y="825" width="760" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="boundary_note" value="&lt;b&gt;Trust boundary:&lt;/b&gt; the reviewed offline AxonLLM fixture and modeled range effects can execute in separate gVisor/OCI workers while controls, kill checks, adjudication, and evidence remain outside. Arbitrary/live agents remain pending." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxCell id="boundary_note" value="&lt;b&gt;Trust boundary:&lt;/b&gt; fixture or arbitrary Agent-RPC processes and modeled range effects can execute in separate gVisor/OCI workers while controls, kill checks, adjudication, and evidence remain outside. Credentialed remote inference still requires a reviewed broker." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=center;" vertex="1" parent="1">
           <mxGeometry x="220" y="895" width="1020" height="55" as="geometry"/>
         </mxCell>
       </root>
