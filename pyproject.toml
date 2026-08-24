@@ -48,6 +48,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 "escape_lab.data" = [
     "baselines/*.json",
+    "benchmarks/*.json",
     "scenarios/*.json",
     "schemas/*.json",
 ]

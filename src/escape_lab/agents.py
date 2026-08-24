@@ -31,6 +31,8 @@ class AgentUsage:
     completion_tokens: int = 0
     total_tokens: int = 0
     model_turns: int = 0
+    cost_usd: float | None = None
+    retries: int = 0
     provider: str | None = None
     model: str | None = None
 
@@ -173,6 +175,9 @@ class AxonLLMConfig:
     preferred_provider: str | None = None
     max_turns: int = 20
     system_prompt: str | None = None
+    temperature: float = 0.0
+    top_p: float | None = None
+    max_tokens: int | None = None
 
     def __post_init__(self) -> None:
         if self.mode not in {"fixture", "live"}:
@@ -187,6 +192,12 @@ class AxonLLMConfig:
             )
         if self.max_turns < 1:
             raise ValueError("AxonLLM max_turns must be at least 1")
+        if self.temperature < 0 or self.temperature > 2:
+            raise ValueError("AxonLLM temperature must be between 0 and 2")
+        if self.top_p is not None and not 0 < self.top_p <= 1:
+            raise ValueError("AxonLLM top_p must be greater than 0 and at most 1")
+        if self.max_tokens is not None and self.max_tokens < 1:
+            raise ValueError("AxonLLM max_tokens must be at least 1")
         if self.mode == "live":
             missing = [
                 name
@@ -622,6 +633,15 @@ class AxonLLMAgentSession:
             if config.source is not None
             else None
         )
+        configuration_digests = {
+            name: _file_identity(path)
+            for name, path in (
+                ("models", config.models),
+                ("providers", config.providers),
+                ("pricing", config.pricing),
+            )
+            if path is not None
+        }
         self.metadata = {
             "adapter": "axonllm",
             "version": self._axonllm_version,
@@ -652,6 +672,18 @@ class AxonLLMAgentSession:
                 else "configured"
             ),
             "source_digest": source_digest,
+            "configuration_digests": configuration_digests,
+            "sampling": {
+                "temperature": config.temperature,
+                "top_p": config.top_p,
+                "max_tokens": config.max_tokens,
+                "provider_seed_control": False,
+            },
+            "system_prompt_digest": sha256(
+                (
+                    config.system_prompt or _DEFAULT_SYSTEM_PROMPT
+                ).encode("utf-8")
+            ).hexdigest(),
             "route_snapshot": _safe_route_snapshot(
                 self._router.route_snapshot()
             ),
@@ -691,11 +723,13 @@ class AxonLLMAgentSession:
                 tools=deepcopy(self._tools),
                 tool_choice="auto",
                 preferred_provider=self._config.preferred_provider,
-                temperature=0,
+                temperature=self._config.temperature,
+                top_p=self._config.top_p,
+                max_tokens=self._config.max_tokens,
             )
         )
         self._turns += 1
-        usage = _response_usage(response)
+        usage = _response_usage(self._router, response)
         choices = getattr(response, "choices", None)
         if not isinstance(choices, list) or not choices:
             raise AgentAdapterError("AxonLLM response did not contain a choice")
@@ -1065,16 +1099,56 @@ def _scenario_prompt(scenario: Scenario) -> str:
     )
 
 
-def _response_usage(response: Any) -> AgentUsage:
+def _response_usage(router: Any, response: Any) -> AgentUsage:
     usage = getattr(response, "usage", None)
     return AgentUsage(
         prompt_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
         completion_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
         total_tokens=int(getattr(usage, "total_tokens", 0) or 0),
         model_turns=1,
+        cost_usd=_response_cost(router, response),
+        retries=0,
         provider=str(getattr(response, "provider", "") or "") or None,
         model=str(getattr(response, "model", "") or "") or None,
     )
+
+
+def _response_cost(router: Any, response: Any) -> float | None:
+    route_engine = getattr(router, "_router", None)
+    tracker = getattr(route_engine, "_cost_tracker", None)
+    calculator = getattr(tracker, "calculate_cost", None)
+    if not callable(calculator):
+        return None
+    provider = str(getattr(response, "provider", "") or "")
+    model = str(
+        getattr(response, "provider_model", None)
+        or getattr(response, "model", "")
+        or ""
+    )
+    has_pricing = getattr(tracker, "has_pricing", None)
+    if callable(has_pricing) and not has_pricing(provider, model):
+        return None
+    usage = getattr(response, "usage", None)
+    try:
+        return float(
+            calculator(
+                provider,
+                model,
+                int(getattr(usage, "prompt_tokens", 0) or 0),
+                int(getattr(usage, "completion_tokens", 0) or 0),
+                cached_tokens=int(getattr(usage, "cached_tokens", 0) or 0),
+                cache_creation_tokens=int(
+                    getattr(usage, "cache_creation_tokens", 0) or 0
+                ),
+            )
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _file_identity(path: Path) -> str:
+    resolved = path.resolve()
+    return sha256(resolved.read_bytes()).hexdigest()
 
 
 def _directory_identity(path: Path) -> str:

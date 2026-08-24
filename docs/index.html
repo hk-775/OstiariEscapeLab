@@ -233,6 +233,9 @@
         <a class="button" href="results/openai-hf-incident-oci-gate-v0.2.json">
           OCI incident gate JSON
         </a>
+        <a class="button" href="results/private-pilot-shadow-v0.1.json">
+          Benchmark shadow JSON
+        </a>
       </div>
     </div>
   </header>
@@ -242,7 +245,7 @@
       <div class="metric"><strong>12</strong><span>reviewed test scenarios</span></div>
       <div class="metric"><strong>1</strong><span>public incident replay</span></div>
       <div class="metric"><strong>0%</strong><span>C2–C4 containment failures</span></div>
-      <div class="metric"><strong>2</strong><span>public runtime gates</span></div>
+      <div class="metric"><strong>480</strong><span>private-pilot shadow runs</span></div>
     </div>
 
     <section>
@@ -352,6 +355,49 @@
           <a href="diagrams/control-profile-results.drawio">Editable Draw.io source</a>.
         </figcaption>
       </figure>
+    </section>
+
+    <section>
+      <h2>Private benchmark readiness</h2>
+      <p class="lede">
+        The protected pilot pre-registers S02, S03, S06 and S09 across C1–C4
+        for 30 paired trials per scenario/profile. It rotates synthetic
+        fixtures, requires explicit live-model pricing and spend confirmation,
+        and generates independent reviewer assignments before a result can be
+        finalized.
+      </p>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Credential-free shadow</h3>
+          <p>
+            480/480 runs were valid. All 221 aggregate and per-scenario checks
+            passed. C2–C4 had 0% containment failures, 100% task completion,
+            complete evidence and recovery, and no false blocks.
+          </p>
+          <p>
+            <a href="results/private-pilot-shadow-v0.1.json">
+              Download the stable shadow summary
+            </a>
+          </p>
+        </div>
+        <div class="card">
+          <h3>Review and live boundary</h3>
+          <p>
+            The deterministic sampler selected 156 runs: every O2–O4 outcome
+            plus 10% of O0–O1. Each needs two reviewers, with a third required
+            on disagreement. No live-model result is claimed yet.
+          </p>
+          <p>
+            <a href="https://github.com/hk-775/OstiariEscapeLab/blob/main/docs/benchmarking.md">
+              Read the private benchmark guide
+            </a>
+          </p>
+        </div>
+      </div>
+      <div class="note">
+        Shadow results validate the campaign runner, metrics, thresholds and
+        review workflow. They do not measure a model or certify a runtime.
+      </div>
     </section>
 
     <section>

@@ -52,6 +52,38 @@ class PackagingTests(unittest.TestCase):
             resource_json("baselines/gvisor-external.json"),
         )
 
+    def test_packaged_private_benchmark_plan_matches_reviewed_source(
+        self,
+    ) -> None:
+        source = json.loads(
+            (
+                PROJECT_ROOT
+                / "benchmarks"
+                / "private-pilot-v0.1.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            source,
+            resource_json("benchmarks/private-pilot-v0.1.json"),
+        )
+
+    def test_packaged_shadow_benchmark_plan_matches_reviewed_source(
+        self,
+    ) -> None:
+        source = json.loads(
+            (
+                PROJECT_ROOT
+                / "benchmarks"
+                / "private-pilot-shadow-v0.1.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            source,
+            resource_json(
+                "benchmarks/private-pilot-shadow-v0.1.json"
+            ),
+        )
+
     def test_packaged_schema_matches_reviewed_source(self) -> None:
         source = json.loads(
             (
@@ -63,6 +95,19 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(
             source,
             resource_json("schemas/scenario-manifest.schema.json"),
+        )
+
+    def test_packaged_benchmark_schema_matches_reviewed_source(self) -> None:
+        source = json.loads(
+            (
+                PROJECT_ROOT
+                / "schemas"
+                / "benchmark-plan.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            source,
+            resource_json("schemas/benchmark-plan.schema.json"),
         )
 
     def test_registry_loads_without_a_source_checkout(self) -> None:

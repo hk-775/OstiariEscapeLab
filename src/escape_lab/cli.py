@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 from escape_lab.agent_sandbox import (
     GVisorAgentConfig,
@@ -18,6 +19,12 @@ from escape_lab.agents import (
     AxonLLMAgentFactory,
     AxonLLMConfig,
     ScriptedAgentFactory,
+)
+from escape_lab.benchmark import (
+    benchmark_maximum_cost,
+    benchmark_run_count,
+    load_benchmark_plan,
+    run_benchmark,
 )
 from escape_lab.disclosure import (
     DISCLOSURE_STATUSES,
@@ -39,6 +46,12 @@ from escape_lab.orchestrator import (
     default_registry,
 )
 from escape_lab.resources import resource_text
+from escape_lab.review import (
+    ATTRIBUTION_CLASSES,
+    append_benchmark_review,
+    benchmark_review_status,
+    finalize_benchmark_reviews,
+)
 from escape_lab.sandbox import (
     DockerSandboxConfig,
     DockerSandboxFactory,
@@ -161,6 +174,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=20,
         help="Maximum AxonLLM model turns per scenario",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="AxonLLM sampling temperature",
+    )
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        default=None,
+        help="Optional AxonLLM nucleus-sampling threshold",
+    )
+    parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=None,
+        help="Optional AxonLLM output-token limit per turn",
     )
     parser.add_argument(
         "--agent-runtime",
@@ -298,6 +329,66 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write gate.json, gate.md, gate.html, and junit.xml here",
     )
 
+    benchmark = subparsers.add_parser(
+        "benchmark",
+        help="Run a versioned paired benchmark campaign",
+    )
+    benchmark.add_argument(
+        "--plan",
+        type=Path,
+        default=None,
+        help="Benchmark plan JSON; defaults to the packaged private pilot",
+    )
+    benchmark.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Write benchmark reports and review queue here",
+    )
+    benchmark.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Validate and describe the plan without executing any trials",
+    )
+    benchmark.add_argument(
+        "--confirm-live-spend",
+        action="store_true",
+        help="Confirm the plan's maximum authorized live-model spend",
+    )
+
+    review_add = subparsers.add_parser(
+        "review-add",
+        help="Append one independent benchmark review",
+    )
+    review_add.add_argument("benchmark_dir", type=Path)
+    review_add.add_argument("run_id")
+    review_add.add_argument("--reviewer", required=True)
+    review_add.add_argument(
+        "--outcome",
+        required=True,
+        choices=["O0", "O1", "O2", "O3", "O4"],
+    )
+    review_add.add_argument("--severity", type=int, required=True)
+    review_add.add_argument(
+        "--attribution",
+        required=True,
+        choices=sorted(ATTRIBUTION_CLASSES),
+    )
+    review_add.add_argument("--confidence", type=float, required=True)
+    review_add.add_argument("--note", default="")
+
+    review_status = subparsers.add_parser(
+        "review-status",
+        help="Show independent-review progress for a benchmark",
+    )
+    review_status.add_argument("benchmark_dir", type=Path)
+
+    review_finalize = subparsers.add_parser(
+        "review-finalize",
+        help="Finalize reviewed outcomes and benchmark thresholds",
+    )
+    review_finalize.add_argument("benchmark_dir", type=Path)
+
     replay = subparsers.add_parser("replay", help="Replay a frozen run")
     replay.add_argument("run_dir", type=Path)
     replay.add_argument("--allow-version-drift", action="store_true")
@@ -397,6 +488,9 @@ def _orchestrator(args: argparse.Namespace) -> tuple[Path, RunOrchestrator]:
                 model=args.model,
                 preferred_provider=args.provider,
                 max_turns=args.max_agent_turns,
+                temperature=args.temperature,
+                top_p=args.top_p,
+                max_tokens=args.max_output_tokens,
             )
         )
     else:
@@ -467,6 +561,97 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Created Escape Lab release baseline: {destination}")
             print("Run: escape-lab gate")
             return 0
+
+        if args.command == "review-add":
+            record = append_benchmark_review(
+                args.benchmark_dir.resolve(),
+                run_id=args.run_id,
+                reviewer=args.reviewer,
+                outcome=args.outcome,
+                severity=args.severity,
+                attribution=args.attribution,
+                confidence=args.confidence,
+                note=args.note,
+            )
+            print(
+                f"Review #{record['sequence']} recorded: "
+                f"{record['run_id']} by {record['reviewer']} "
+                f"({record['record_hash']})"
+            )
+            return 0
+
+        if args.command == "review-status":
+            status = benchmark_review_status(
+                args.benchmark_dir.resolve()
+            )
+            print(
+                f"review_status={status['status']} "
+                f"resolved={status['queue']['resolved']} "
+                f"pending={status['queue']['pending']} "
+                f"unresolved={status['queue']['unresolved']} "
+                f"ledger_valid={status['integrity']['valid']}"
+            )
+            return 0 if status["complete"] else 12
+
+        if args.command == "review-finalize":
+            report = finalize_benchmark_reviews(
+                args.benchmark_dir.resolve()
+            )
+            print(
+                f"Benchmark finalization: {report['status']} -> "
+                f"{args.benchmark_dir.resolve() / 'benchmark-final.json'}"
+            )
+            if not report["finalized"]:
+                return 12
+            return 0 if report["passed"] else 10
+
+        benchmark_plan: dict[str, Any] | None = None
+        if args.command == "benchmark":
+            benchmark_plan = load_benchmark_plan(
+                args.plan.resolve() if args.plan is not None else None
+            )
+            if args.validate_only:
+                print(
+                    f"Benchmark plan valid: {benchmark_plan['name']} "
+                    f"runs={benchmark_run_count(benchmark_plan)} "
+                    f"maximum_authorized_cost_usd="
+                    f"{benchmark_maximum_cost(benchmark_plan):.2f}"
+                )
+                print(
+                    "Execution requires "
+                    f"agent={benchmark_plan['execution']['agent_adapter']} "
+                    f"mode={benchmark_plan['execution']['agent_mode']} "
+                    f"control={benchmark_plan['execution']['control_backend']} "
+                    f"range={benchmark_plan['execution']['range_backend']}"
+                )
+                return 0
+            if (
+                benchmark_plan["execution"]["agent_mode"] == "live"
+                and not args.confirm_live_spend
+            ):
+                raise ValueError(
+                    "Live benchmark execution requires "
+                    "--confirm-live-spend; the plan authorizes at most "
+                    f"${benchmark_maximum_cost(benchmark_plan):.2f}"
+                )
+            args.agent = benchmark_plan["execution"]["agent_adapter"]
+            args.axonllm_mode = benchmark_plan["execution"]["agent_mode"]
+            args.backend = benchmark_plan["execution"]["control_backend"]
+            args.range_backend = benchmark_plan["execution"]["range_backend"]
+            model_parameters = benchmark_plan["sampling"][
+                "model_parameters"
+            ]
+            args.temperature = float(model_parameters["temperature"])
+            args.top_p = (
+                float(model_parameters["top_p"])
+                if model_parameters["top_p"] is not None
+                else None
+            )
+            args.max_output_tokens = int(model_parameters["max_tokens"])
+            if args.range_backend != "synthetic" and not args.sandbox_image:
+                raise ValueError(
+                    "--sandbox-image is required by the benchmark plan"
+                )
 
         project_root, orchestrator = _orchestrator(args)
         if args.command == "validate":
@@ -564,6 +749,30 @@ def main(argv: list[str] | None = None) -> int:
             for reason in gate_result.report["reasons"]:
                 print(f"REGRESSION: {reason}", file=sys.stderr)
             return 0 if gate_result.passed else 10
+
+        if args.command == "benchmark":
+            assert benchmark_plan is not None
+            result = run_benchmark(
+                orchestrator,
+                benchmark_plan,
+                output_dir=(
+                    args.output_dir.resolve()
+                    if args.output_dir is not None
+                    else None
+                ),
+            )
+            _append_github_summary(result.output_dir / "benchmark.md")
+            print(
+                f"Benchmark execution: {result.report['status']} -> "
+                f"{result.output_dir}"
+            )
+            print(
+                "Independent review queue: "
+                f"{result.output_dir / 'review-queue.json'}"
+            )
+            for reason in result.report["reasons"]:
+                print(f"REGRESSION: {reason}", file=sys.stderr)
+            return 0 if result.execution_passed else 10
 
         if args.command == "replay":
             result, check = replay_run(

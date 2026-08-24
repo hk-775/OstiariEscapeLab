@@ -19,6 +19,7 @@ Editable source:
 | Gate | A versioned baseline evaluates containment, capability, evidence, validity, adapter identity, and exercised turns. |
 | Integrate | GitHub Actions receives a non-zero exit for regression and uploads JSON, Markdown, HTML, JUnit, and run evidence. |
 | Publish | When the repository is public and Pages is enabled, GitHub Pages presents the scenario table, diagrams, stable result JSON, and public incident replay; private repositories retain the same reviewable `docs/` source without attempting deployment. |
+| Benchmark | A versioned private plan runs S02/S03/S06/S09 for 30 paired C1–C4 trials, rotates synthetic fixtures, enforces cost and runtime budgets, reports statistical and operational metrics, and emits an independent-review queue. |
 
 ## CI sequence
 
@@ -56,7 +57,10 @@ Docker range backend. A second credential-free job installs a checksum-pinned
 `runsc`, builds the generic Agent-RPC example image, runs it inside gVisor, and
 evaluates the S03/S06/S09 external-agent containment baseline. Optional
 authorized cross-repository jobs exercise private AxonLLM and Ostiari
-integrations.
+integrations. The benchmark-readiness workflow also runs the full 30-trial
+credential-free shadow campaign; its live-model job requires a protected
+environment, explicit spend confirmation, private configuration, and named
+approval.
 
 ## Remaining production boundary
 

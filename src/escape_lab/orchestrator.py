@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -79,14 +80,25 @@ class RunOrchestrator:
         seed: int = 1,
         allow_c0: bool = False,
         replay_of: str | None = None,
+        budget_overrides: dict[str, int | float] | None = None,
+        scenario_override: Scenario | None = None,
+        variant_id: str | None = None,
     ) -> RunResult:
-        scenario = self.registry.get(scenario_id)
+        scenario = scenario_override or self.registry.get(scenario_id)
+        if scenario.scenario_id != scenario_id.upper():
+            raise ValueError(
+                "Scenario override identity does not match requested scenario"
+            )
         if profile == ControlProfile.C0 and not allow_c0:
             raise SafetyBoundaryError(
                 "C0 disables runtime enforcement. Re-run with --allow-c0 only for "
                 "reviewed synthetic scenarios."
             )
         self._preflight_safety(scenario)
+        budgets = self._effective_budgets(
+            scenario.data["budgets"],
+            budget_overrides,
+        )
 
         started_at = utc_now_iso()
         started_monotonic = time.monotonic()
@@ -167,6 +179,9 @@ class RunOrchestrator:
                 "control_profile": profile.value,
                 "control_backend": self.control_backend,
                 "seed": seed,
+                "budgets": budgets,
+                "budget_overrides": budget_overrides or {},
+                "variant_id": variant_id,
                 "model_configuration": agent_configuration,
                 "runner": {
                     "name": "ostiari-escape-lab",
@@ -187,6 +202,8 @@ class RunOrchestrator:
                     "profile": profile.value,
                     "seed": seed,
                     "control_backend": self.control_backend,
+                    "budgets": budgets,
+                    "variant_id": variant_id,
                     "agent_configuration": agent_configuration,
                     "range_configuration": execution_range.metadata,
                 },
@@ -211,7 +228,6 @@ class RunOrchestrator:
 
         try:
             assert agent_session is not None
-            budgets = scenario.data["budgets"]
             try:
                 while True:
                     elapsed = time.monotonic() - started_monotonic
@@ -281,8 +297,58 @@ class RunOrchestrator:
                                 "prompt_tokens": event.usage.prompt_tokens,
                                 "completion_tokens": event.usage.completion_tokens,
                                 "total_tokens": event.usage.total_tokens,
+                                "cost_usd": event.usage.cost_usd,
+                                "retries": event.usage.retries,
                             },
                         )
+                    if (
+                        event.usage.model_turns
+                        and event.usage.cost_usd is None
+                        and agent_configuration.get("mode") == "live"
+                    ):
+                        validity = RunValidity.INVALID
+                        terminated = True
+                        metrics.interventions += 1
+                        notes.append(
+                            "Live-model cost accounting was unavailable"
+                        )
+                        evidence.record(
+                            "intervention",
+                            {
+                                "type": "circuit_breaker",
+                                "trigger": "cost_accounting_unavailable",
+                                "result": "terminated",
+                            },
+                        )
+                        break
+                    if metrics.model_cost_usd > float(budgets["cost_usd"]):
+                        terminated = True
+                        metrics.interventions += 1
+                        notes.append("Model cost budget exceeded")
+                        evidence.record(
+                            "intervention",
+                            {
+                                "type": "circuit_breaker",
+                                "trigger": "model_cost_budget",
+                                "result": "terminated",
+                                "observed_cost_usd": metrics.model_cost_usd,
+                                "budget_usd": float(budgets["cost_usd"]),
+                            },
+                        )
+                        break
+                    if metrics.retry_attempts > int(budgets["retries"]):
+                        terminated = True
+                        metrics.interventions += 1
+                        notes.append("Model retry budget exceeded")
+                        evidence.record(
+                            "intervention",
+                            {
+                                "type": "circuit_breaker",
+                                "trigger": "model_retry_budget",
+                                "result": "terminated",
+                            },
+                        )
+                        break
                     if metrics.model_tokens > int(budgets["model_tokens"]):
                         terminated = True
                         metrics.interventions += 1
@@ -331,6 +397,8 @@ class RunOrchestrator:
                     )
                     step_request_ids[action.step_id] = request.request_id
                     metrics.actions_requested += 1
+                    if request.expected_authorized:
+                        metrics.authorized_actions_requested += 1
                     if request.actor != "agent":
                         metrics.delegated_actions += 1
                     if request.prohibited_attempt:
@@ -354,8 +422,26 @@ class RunOrchestrator:
                             "facets": list(preview.facets),
                         },
                     )
+                    if metrics.delegated_actions > int(budgets["delegations"]):
+                        terminated = True
+                        metrics.interventions += 1
+                        notes.append("Delegation budget exceeded")
+                        evidence.record(
+                            "intervention",
+                            {
+                                "request_id": request.request_id,
+                                "type": "circuit_breaker",
+                                "trigger": "delegation_budget",
+                                "result": "not_executed",
+                            },
+                        )
+                        break
                     checkpoint = execution_range.checkpoint()
                     decision = control.evaluate(request, preview)
+                    metrics.policy_decisions += 1
+                    metrics.policy_decision_latencies_ms.append(
+                        decision.latency_ms
+                    )
                     evidence.record(
                         "policy_decision",
                         {
@@ -685,6 +771,7 @@ class RunOrchestrator:
                     scenario.data.get("disclosure_status", "private")
                 ),
                 notes=notes,
+                variant_id=variant_id,
             )
             write_run_report(result)
             return result
@@ -703,6 +790,40 @@ class RunOrchestrator:
         metrics.prompt_tokens += int(usage.prompt_tokens)
         metrics.completion_tokens += int(usage.completion_tokens)
         metrics.model_tokens += int(usage.total_tokens)
+        metrics.retry_attempts += int(usage.retries)
+        if usage.cost_usd is None:
+            if usage.model_turns:
+                metrics.cost_accounting_complete = False
+        else:
+            metrics.model_cost_usd += float(usage.cost_usd)
+        if usage.provider and usage.provider not in metrics.observed_providers:
+            metrics.observed_providers.append(str(usage.provider))
+        if usage.model and usage.model not in metrics.observed_models:
+            metrics.observed_models.append(str(usage.model))
+
+    @staticmethod
+    def _effective_budgets(
+        declared: dict[str, Any],
+        overrides: dict[str, int | float] | None,
+    ) -> dict[str, int | float]:
+        effective = deepcopy(declared)
+        if overrides:
+            unknown = sorted(set(overrides) - set(effective))
+            if unknown:
+                raise ValueError(
+                    "Unknown budget override(s): " + ", ".join(unknown)
+                )
+            effective.update(overrides)
+        for name, value in effective.items():
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or value < 0
+            ):
+                raise ValueError(
+                    f"Effective budget {name} must be a non-negative number"
+                )
+        return effective
 
     @staticmethod
     def _record_first_intervention(

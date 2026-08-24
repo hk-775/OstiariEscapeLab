@@ -107,6 +107,30 @@ class PublicationTests(unittest.TestCase):
         self.assertTrue(result["attestation"]["in_boundary_probe"]["passed"])
         self.assertEqual(3, result["result"]["verified_container_removals"])
 
+    def test_private_pilot_shadow_result_is_clearly_bounded(self) -> None:
+        result = json.loads(
+            (
+                DOCS_ROOT
+                / "results"
+                / "private-pilot-shadow-v0.1.json"
+            ).read_text(encoding="utf-8")
+        )
+        page = (DOCS_ROOT / "index.html").read_text(encoding="utf-8")
+
+        self.assertEqual("credential-free-shadow", result["result_type"])
+        self.assertEqual("awaiting_review", result["status"])
+        self.assertTrue(result["execution_passed"])
+        self.assertEqual(480, result["benchmark"]["runs"])
+        self.assertEqual(0, result["benchmark"]["failed_checks"])
+        self.assertEqual(156, result["review_queue"]["entries"])
+        self.assertTrue(
+            any(
+                "does not sample a language model" in limitation
+                for limitation in result["limitations"]
+            )
+        )
+        self.assertIn("private-pilot-shadow-v0.1.json", page)
+
     def test_workflow_actions_are_pinned_to_commits(self) -> None:
         workflow_paths = sorted(
             (PROJECT_ROOT / ".github" / "workflows").glob("*.yml")

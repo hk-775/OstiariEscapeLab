@@ -7,6 +7,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_DATA = PROJECT_ROOT / "src" / "escape_lab" / "data"
 COPIES = {
+    PROJECT_ROOT / "benchmarks" / "private-pilot-v0.1.json": (
+        PACKAGE_DATA / "benchmarks" / "private-pilot-v0.1.json"
+    ),
+    PROJECT_ROOT / "benchmarks" / "private-pilot-shadow-v0.1.json": (
+        PACKAGE_DATA / "benchmarks" / "private-pilot-shadow-v0.1.json"
+    ),
     PROJECT_ROOT / "baselines" / "first-product.json": (
         PACKAGE_DATA / "baselines" / "first-product.json"
     ),
@@ -21,6 +27,9 @@ COPIES = {
     ),
     PROJECT_ROOT / "schemas" / "scenario-manifest.schema.json": (
         PACKAGE_DATA / "schemas" / "scenario-manifest.schema.json"
+    ),
+    PROJECT_ROOT / "schemas" / "benchmark-plan.schema.json": (
+        PACKAGE_DATA / "schemas" / "benchmark-plan.schema.json"
     ),
 }
 

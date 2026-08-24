@@ -1,0 +1,197 @@
+name: Benchmark readiness
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "benchmarks/**"
+      - "docker/range/**"
+      - "scenarios/**"
+      - "schemas/benchmark-plan.schema.json"
+      - "src/escape_lab/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "scripts/sync_package_data.py"
+      - ".github/workflows/benchmark.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "benchmarks/**"
+      - "docker/range/**"
+      - "scenarios/**"
+      - "schemas/benchmark-plan.schema.json"
+      - "src/escape_lab/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "scripts/sync_package_data.py"
+      - ".github/workflows/benchmark.yml"
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: Run the protected live-model private pilot
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: escape-lab-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    name: Credential-free 30-trial shadow campaign
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out Escape Lab
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Escape Lab
+        run: python -m pip install ".[dev]"
+
+      - name: Validate the protected live plan
+        run: |
+          python -m escape_lab benchmark \
+            --plan benchmarks/private-pilot-v0.1.json \
+            --validate-only
+
+      - name: Run the full shadow campaign
+        run: |
+          python -m escape_lab \
+            --artifacts-root artifacts/benchmark-shadow \
+            benchmark \
+            --plan benchmarks/private-pilot-shadow-v0.1.json \
+            --output-dir artifacts/benchmark-shadow/report
+
+      - name: Preserve shadow benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: private-pilot-shadow-evidence
+          path: artifacts/benchmark-shadow
+          if-no-files-found: error
+          retention-days: 30
+
+  live-private-pilot:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.run_live == true &&
+      vars.ENABLE_PRIVATE_BENCHMARK == 'true'
+    name: Protected live-model private pilot
+    environment: private-benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Check out Escape Lab
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check out pinned AxonLLM
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: hk-775/axonllm
+          ref: 1ef473eb7d216eabba42fc41df9856e923bfdea5
+          path: vendor/AxonLLM
+          persist-credentials: false
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+
+      - name: Check out pinned Ostiari
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: hk-775/ostiari
+          ref: 877d99c1d3bd2d17206170cfb6e26061c734fe1e
+          path: vendor/ostiari
+          persist-credentials: false
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install the pinned benchmark stack
+        run: |
+          python -m pip install \
+            ".[dev]" \
+            ./vendor/AxonLLM \
+            ./vendor/ostiari
+
+      - name: Build the isolated range
+        run: |
+          docker build \
+            --file docker/range/Dockerfile \
+            --tag escape-lab-range:benchmark \
+            .
+
+      - name: Materialize protected routing configuration
+        env:
+          MODELS_YAML: ${{ secrets.BENCHMARK_MODELS_YAML }}
+          PROVIDERS_YAML: ${{ secrets.BENCHMARK_PROVIDERS_YAML }}
+          PRICING_YAML: ${{ secrets.BENCHMARK_PRICING_YAML }}
+        run: |
+          set -euo pipefail
+          test -n "${MODELS_YAML}"
+          test -n "${PROVIDERS_YAML}"
+          test -n "${PRICING_YAML}"
+          config_dir="${RUNNER_TEMP}/benchmark-config"
+          install -d -m 0700 "${config_dir}"
+          umask 077
+          printf '%s' "${MODELS_YAML}" >"${config_dir}/models.yaml"
+          printf '%s' "${PROVIDERS_YAML}" >"${config_dir}/providers.yaml"
+          printf '%s' "${PRICING_YAML}" >"${config_dir}/pricing.yaml"
+
+      - name: Run the approved live-model campaign
+        env:
+          BENCHMARK_MODEL: ${{ vars.BENCHMARK_MODEL }}
+          BENCHMARK_PROVIDER: ${{ vars.BENCHMARK_PROVIDER }}
+          PROVIDER_ENV_NAME: ${{ vars.BENCHMARK_PROVIDER_ENV_NAME }}
+          PROVIDER_CREDENTIAL: ${{ secrets.BENCHMARK_PROVIDER_CREDENTIAL }}
+        run: |
+          set -euo pipefail
+          test -n "${BENCHMARK_MODEL}"
+          test -n "${PROVIDER_ENV_NAME}"
+          test -n "${PROVIDER_CREDENTIAL}"
+          [[ "${PROVIDER_ENV_NAME}" =~ ^[A-Z][A-Z0-9_]*$ ]]
+          args=(
+            python -m escape_lab
+            --artifacts-root artifacts/private-live-benchmark
+            --axonllm-src vendor/AxonLLM
+            --axonllm-models "${RUNNER_TEMP}/benchmark-config/models.yaml"
+            --axonllm-providers "${RUNNER_TEMP}/benchmark-config/providers.yaml"
+            --axonllm-pricing "${RUNNER_TEMP}/benchmark-config/pricing.yaml"
+            --ostiari-src vendor/ostiari
+            --model "${BENCHMARK_MODEL}"
+            --sandbox-image escape-lab-range:benchmark
+          )
+          if [[ -n "${BENCHMARK_PROVIDER}" ]]; then
+            args+=(--provider "${BENCHMARK_PROVIDER}")
+          fi
+          args+=(
+            benchmark
+            --plan benchmarks/private-pilot-v0.1.json
+            --confirm-live-spend
+            --output-dir artifacts/private-live-benchmark/report
+          )
+          env "${PROVIDER_ENV_NAME}=${PROVIDER_CREDENTIAL}" "${args[@]}"
+
+      - name: Preserve private benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: private-live-model-benchmark-evidence
+          path: artifacts/private-live-benchmark
+          if-no-files-found: error
+          retention-days: 90

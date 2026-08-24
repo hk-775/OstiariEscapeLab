@@ -22,7 +22,7 @@ Status meanings:
 | FR-009 Rollback | Implemented | Pre-action checkpoints, post-condition rollback, teardown verification. |
 | FR-010 Evidence capture | Implemented | Ordered out-of-band JSONL, snapshots, argument/result digests, SHA-256 chain. |
 | FR-011 Replay | Implemented | Frozen manifest/seed/profile replay with digest, environment, outcome, and assertion comparison. |
-| FR-012 Reporting | Implemented | JSON result, event bundle, incident brief, experiments, control comparison. |
+| FR-012 Reporting | Implemented | JSON result, event bundle, incident brief, experiments, control comparison, versioned benchmark campaigns, statistical/operational metrics, reviewer queues, adjudication ledgers, HTML, Markdown, and JUnit. |
 | FR-013 Kill switch | Implemented | Independent artifact control file checked before every action. |
 | FR-014 Disclosure workflow | Implemented | Append-only private/acknowledged/remediated/coordinated/publishable ledger. |
 | FR-015 Release regression gate | Implemented | Versioned thresholds, non-zero regression exit, JSON/Markdown/HTML/JUnit reports, and GitHub Actions integration. |
@@ -37,7 +37,7 @@ Status meanings:
 | NFR-04 Portability | Implemented | Self-contained Python 3.10+ wheel with packaged catalog/schema/baseline and Linux-compatible Docker posture. |
 | NFR-05 Privacy | Implemented | Synthetic fixtures, no private reasoning, sensitive-key redaction before evidence writes. |
 | NFR-06 Extensibility | Implemented | Data-driven scenario/assertion contracts and modular control/range adapters. |
-| NFR-07 Performance | Partial | Decision latency recorded; production load and timeout characterization pending. |
+| NFR-07 Performance | Partial | Decision latency, run duration, intervention time/actions, C1-relative overhead, p50/p95 summaries, tokens, retries, and cost are reported and gateable. Concurrent production load and timeout characterization remain pending. |
 | NFR-08 Integrity | Implemented | Append-only SHA-256 event and disclosure chains. |
 
 ## Acceptance criteria
@@ -48,7 +48,7 @@ Status meanings:
 | AC-02 C1–C4 share one contract; reviewed C0 | Implemented | One manifest drives all profiles; C0 needs explicit opt-in. |
 | AC-03 No public internet, production identity, host filesystem, or evidence store | Partial | Structurally true for the synthetic runner and enforced for OCI range plus arbitrary gVisor Agent-RPC workers with no host mounts, network, injected identity, or evidence path. Embedded image credentials, credentialed remote inference, and external audit remain pending. |
 | AC-04 All tool/delegated actions correlated; evidence loss fails closed | Implemented | Parent IDs, trajectory IDs, evidence assertions, C4 evidence breaker. |
-| AC-05 O0–O4 deterministic gold set | Implemented | Assertion engine and scenario-matrix tests; external reviewer agreement pending. |
+| AC-05 O0–O4 deterministic gold set | Implemented | Assertion engine and scenario-matrix tests plus a hash-chained two-reviewer workflow with third-review disagreement resolution. A completed external review campaign remains pending. |
 | AC-06 Teardown verifies cleanup | Implemented | Process, filesystem, identity, network, range-root, and exact created-container-ID checks. |
 | AC-07 Frozen replay | Implemented | Replay command and test. |
 | AC-08 No live secrets, personal data, or operational exploit detail | Implemented | Synthetic-only catalog and preflight. |
@@ -64,7 +64,8 @@ Status meanings:
 - Semantic syscall/process telemetry for activity that bypasses mediated tools.
 - Signed images, SBOM verification, provenance policy, and embedded-secret
   scanning.
-- Multi-reviewer adjudication workflow and reviewer identity management.
+- External identity-backed reviewer assignment and a completed independent
+  adjudication campaign.
 - Durable remote artifact storage, retention enforcement, and access control.
 - T3 cyber-range authorization and operations.
 - Credentialed live-provider qualification and statistical calibration against

@@ -143,17 +143,25 @@ class AssertionHit:
 @dataclass
 class RunMetrics:
     actions_requested: int = 0
+    authorized_actions_requested: int = 0
     actions_executed: int = 0
     model_turns: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     model_tokens: int = 0
+    model_cost_usd: float = 0.0
+    cost_accounting_complete: bool = True
+    retry_attempts: int = 0
+    observed_providers: list[str] = field(default_factory=list)
+    observed_models: list[str] = field(default_factory=list)
     prohibited_attempts: int = 0
     prohibited_attempts_prevented: int = 0
     interventions: int = 0
     approvals: int = 0
     false_blocks: int = 0
     delegated_actions: int = 0
+    policy_decisions: int = 0
+    policy_decision_latencies_ms: list[float] = field(default_factory=list)
     task_completed: bool = False
     recovery_complete: bool = False
     evidence_complete: bool = False
@@ -192,6 +200,7 @@ class RunResult:
     disclosure_status: str = "private"
     attribution: str = "confirmed"
     notes: list[str] = field(default_factory=list)
+    variant_id: str | None = None
 
     @property
     def escaped(self) -> bool:
