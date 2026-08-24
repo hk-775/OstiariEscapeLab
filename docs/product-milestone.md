@@ -18,7 +18,7 @@ Editable source:
 | Report | Each run preserves a manifest, hash-chained evidence, result, incident brief, and model metadata. |
 | Gate | A versioned baseline evaluates containment, capability, evidence, validity, adapter identity, and exercised turns. |
 | Integrate | GitHub Actions receives a non-zero exit for regression and uploads JSON, Markdown, HTML, JUnit, and run evidence. |
-| Publish | GitHub Pages presents the scenario table, diagrams, stable result JSON, and public incident replay. |
+| Publish | When the repository is public and Pages is enabled, GitHub Pages presents the scenario table, diagrams, stable result JSON, and public incident replay; private repositories retain the same reviewable `docs/` source without attempting deployment. |
 
 ## CI sequence
 

@@ -18,6 +18,8 @@ All notable user-visible changes are recorded here.
   image under `runsc`, evaluates a self-contained containment baseline, and
   uploads evidence. Private AxonLLM qualification remains an optional
   authorized integration.
+- Made the results-dashboard workflow skip cleanly while the repository is
+  private and resume GitHub Pages deployment when it is public and enabled.
 - Added a credential-free, socket-free AxonLLM fixture transport and a dedicated
   gVisor agent worker with bounded RPC, identity-absence probes, immutable image
   resolution, fail-closed runtime checks, and verified teardown.
