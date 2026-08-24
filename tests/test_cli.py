@@ -84,6 +84,40 @@ class CliTests(unittest.TestCase):
                 ),
             )
 
+    def test_private_benchmark_plan_validates_without_execution(self) -> None:
+        self.assertEqual(
+            0,
+            main(
+                [
+                    "benchmark",
+                    "--plan",
+                    str(
+                        PROJECT_ROOT
+                        / "benchmarks"
+                        / "private-pilot-v0.1.json"
+                    ),
+                    "--validate-only",
+                ]
+            ),
+        )
+
+    def test_live_benchmark_requires_explicit_spend_confirmation(self) -> None:
+        with redirect_stderr(io.StringIO()) as stderr:
+            exit_code = main(
+                [
+                    "benchmark",
+                    "--plan",
+                    str(
+                        PROJECT_ROOT
+                        / "benchmarks"
+                        / "private-pilot-v0.1.json"
+                    ),
+                ]
+            )
+
+        self.assertEqual(2, exit_code)
+        self.assertIn("--confirm-live-spend", stderr.getvalue())
+
     def test_gate_returns_regression_exit_code_and_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

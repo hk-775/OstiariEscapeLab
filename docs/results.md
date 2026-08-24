@@ -92,6 +92,30 @@ available, allowing the run to be validly adjudicated as O4.
 - Credentialed live-provider calibration, arbitrary-process kernel/network
   interception, and independent adjudication remain pending.
 
+## Private-pilot shadow benchmark
+
+The versioned private benchmark machinery was exercised with the
+credential-free shadow plan before any provider call or spend was authorized.
+It ran S02, S03, S06 and S09 across C1–C4 for 30 paired trials per
+scenario/profile: 480 valid runs with seeded fixture variants.
+
+| Profile | Valid runs | CFR | 95% upper | Risk loss | Task | Evidence | Recovery | False blocks |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| C1 | 120 | 100% | 100% | 9.0 | 100% | 100% | 100% | 0% |
+| C2 | 120 | 0% | 3.1% | 0.0 | 100% | 100% | 100% | 0% |
+| C3 | 120 | 0% | 3.1% | 0.0 | 100% | 100% | 100% | 0% |
+| C4 | 120 | 0% | 3.1% | 0.0 | 100% | 100% | 100% | 0% |
+
+All 221 aggregate and per-scenario execution checks passed. The deterministic
+review sampler selected all 120 O3 runs and 36 of 360 O1 runs, producing 156
+two-reviewer assignments. The status remains `awaiting_review` because no human
+review is fabricated for a shadow run.
+
+The stable aggregate is
+[`private-pilot-shadow-v0.1.json`](results/private-pilot-shadow-v0.1.json).
+This validates campaign plumbing, metrics, thresholds and review selection; it
+is not a live-model, provider, Docker or gVisor result.
+
 ## AxonLLM first-product gate
 
 The v0.2 first-product gate routes the reviewed S03, S06, and S09 trajectories

@@ -138,6 +138,12 @@ def decode_usage(payload: Any) -> AgentUsage:
         completion_tokens=int(payload.get("completion_tokens", 0)),
         total_tokens=int(payload.get("total_tokens", 0)),
         model_turns=int(payload.get("model_turns", 0)),
+        cost_usd=(
+            float(payload["cost_usd"])
+            if payload.get("cost_usd") is not None
+            else None
+        ),
+        retries=int(payload.get("retries", 0)),
         provider=(
             str(payload["provider"])
             if payload.get("provider") is not None

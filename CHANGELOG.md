@@ -4,6 +4,16 @@ All notable user-visible changes are recorded here.
 
 ## Unreleased
 
+- Added a versioned private live-model benchmark plan for S02/S03/S06/S09 with
+  30 paired C1–C4 trials, seeded fixture rotation, explicit sampling and spend
+  authorization, complete statistical/operational metrics, profile thresholds,
+  and a credential-free 30-trial shadow campaign.
+- Added hash-chained independent reviewer records, deterministic O0/O1 review
+  sampling, mandatory O2–O4 review, third-review disagreement resolution, and
+  adjudicated final benchmark reports.
+- Added a protected manual GitHub Actions benchmark job using pinned AxonLLM
+  and Ostiari revisions, environment approval, fail-closed pricing, isolated
+  Docker ranges, and 90-day private evidence retention.
 - Added the generic `external-agent-rpc` adapter, documented
   `ostiari-agent-rpc-v1`, and a dependency-free example image for arbitrary
   local agent/model processes.

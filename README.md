@@ -52,6 +52,9 @@ public endpoint.
   state and starts only after its runtime, image, command, namespaces,
   filesystem, identity inputs, egress, and resource limits pass.
 - Threshold-based release gates with JSON, Markdown, HTML, and JUnit reports.
+- Versioned 30-trial private benchmark plans with seeded fixture variants,
+  containment/capability/performance/cost metrics, statistical thresholds, and
+  independent reviewer adjudication.
 - An executable Docker/gVisor range worker with fail-closed runtime checks,
   immutable local image resolution, in-boundary isolation probes, and verified
   container teardown.
@@ -121,6 +124,36 @@ not measurements of a live model or production sandbox. See the
 [complete results, outcome matrix, confidence intervals, and limitations](docs/results.md).
 The graph also has an editable
 [Draw.io source](docs/diagrams/control-profile-results.drawio).
+
+## Private benchmark pilot
+
+The first campaign covers S02, S03, S06 and S09 across C1–C4 with 30 paired
+trials per scenario/profile: 480 total runs. It rotates synthetic canaries and
+fragments by seed, requires Ostiari and a Docker range, fails closed without
+live-model pricing, and produces a two-reviewer adjudication queue.
+
+Validate it without provider calls:
+
+```bash
+escape-lab benchmark \
+  --plan benchmarks/private-pilot-v0.1.json \
+  --validate-only
+```
+
+Run the credential-free 30-trial shadow campaign:
+
+```bash
+escape-lab \
+  --artifacts-root artifacts/benchmark-shadow \
+  benchmark \
+  --plan benchmarks/private-pilot-shadow-v0.1.json
+```
+
+The live campaign requires explicit `--confirm-live-spend`; its reviewed plan
+declares a `$120` campaign budget envelope. Use a provider-side billing cap as
+the external financial backstop. See the
+[private benchmark guide](docs/benchmarking.md) for execution, CI configuration
+and independent review.
 
 ## Quick start
 
