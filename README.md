@@ -84,13 +84,15 @@ implemented and pending scope.
 
 ## Published results
 
-The public results dashboard is designed for GitHub Pages at:
+When the repository is public and GitHub Pages is enabled, the results
+dashboard is published at:
 
 **https://hk-775.github.io/OstiariEscapeLab/**
 
 It publishes the scenario table, editable diagrams and PNGs, deterministic
 control-profile matrix, AxonLLM release-gate result, and the synthetic July 2026
-OpenAI/Hugging Face incident replay. The same source remains reviewable under
+OpenAI/Hugging Face incident replay. For a private repository, the Pages
+deployment job skips cleanly and the same source remains reviewable under
 [`docs/`](docs/).
 
 ## Deterministic reference results

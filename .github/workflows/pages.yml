@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event.repository.private == false }}
     name: Publish results dashboard
     environment:
       name: github-pages
