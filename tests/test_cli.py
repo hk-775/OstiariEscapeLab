@@ -29,6 +29,46 @@ class CliTests(unittest.TestCase):
             main(["--project-root", str(PROJECT_ROOT), "validate"]),
         )
 
+    def test_external_agent_accepts_shell_free_oci_command(self) -> None:
+        self.assertEqual(
+            0,
+            main(
+                [
+                    "--project-root",
+                    str(PROJECT_ROOT),
+                    "--agent",
+                    "external",
+                    "--agent-runtime",
+                    "gvisor",
+                    "--agent-image",
+                    "example-agent:test",
+                    "--agent-command-json",
+                    '["python","/opt/agent/worker.py"]',
+                    "validate",
+                ]
+            ),
+        )
+
+    def test_external_agent_fails_closed_without_gvisor(self) -> None:
+        with redirect_stderr(io.StringIO()) as stderr:
+            exit_code = main(
+                [
+                    "--project-root",
+                    str(PROJECT_ROOT),
+                    "--agent",
+                    "external",
+                    "--agent-image",
+                    "example-agent:test",
+                    "validate",
+                ]
+            )
+
+        self.assertEqual(2, exit_code)
+        self.assertIn(
+            "External agents require --agent-runtime gvisor",
+            stderr.getvalue(),
+        )
+
     def test_three_scenario_demo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             self.assertEqual(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -10,6 +11,7 @@ from pathlib import Path
 
 from escape_lab.agent_sandbox import (
     GVisorAgentConfig,
+    GVisorAgentFactory,
     GVisorFixtureAgentFactory,
 )
 from escape_lab.agents import (
@@ -52,6 +54,30 @@ def _profiles(value: str) -> list[ControlProfile]:
     return profiles
 
 
+def _agent_command(value: str) -> tuple[str, ...]:
+    try:
+        command = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise argparse.ArgumentTypeError(
+            "--agent-command-json must be a JSON array of strings"
+        ) from error
+    if (
+        not isinstance(command, list)
+        or not command
+        or any(
+            not isinstance(argument, str)
+            or not argument
+            or "\x00" in argument
+            for argument in command
+        )
+    ):
+        raise argparse.ArgumentTypeError(
+            "--agent-command-json must be a non-empty JSON array "
+            "of non-empty strings"
+        )
+    return tuple(command)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="escape-lab",
@@ -83,9 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--agent",
-        choices=["scripted", "axonllm"],
+        choices=["scripted", "axonllm", "external"],
         default="scripted",
-        help="Agent adapter used to propose scenario tool calls",
+        help=(
+            "Agent adapter used to propose scenario tool calls; external "
+            "uses the OCI Agent-RPC protocol"
+        ),
     )
     parser.add_argument(
         "--axonllm-mode",
@@ -142,7 +171,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--agent-image",
         default=None,
-        help="OCI image containing AxonLLM and the offline fixture worker",
+        help="OCI image containing the isolated Agent-RPC process",
+    )
+    parser.add_argument(
+        "--agent-command-json",
+        type=_agent_command,
+        default=None,
+        help=(
+            "Optional shell-free JSON argv for --agent external; "
+            "otherwise use the image ENTRYPOINT/CMD"
+        ),
     )
     parser.add_argument(
         "--agent-sandbox-runtime",
@@ -152,18 +190,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--agent-memory",
         default="512m",
-        help="Memory limit for the isolated fixture agent",
+        help="Memory limit for the isolated agent process",
     )
     parser.add_argument(
         "--agent-cpus",
         default="1.0",
-        help="CPU limit for the isolated fixture agent",
+        help="CPU limit for the isolated agent process",
     )
     parser.add_argument(
         "--agent-pids",
         type=int,
         default=64,
-        help="Process limit for the isolated fixture agent",
+        help="Process limit for the isolated agent process",
     )
     parser.add_argument(
         "--agent-rpc-timeout",
@@ -295,7 +333,33 @@ def _orchestrator(args: argparse.Namespace) -> tuple[Path, RunOrchestrator]:
         project_root,
         require_project_catalog=args.project_root is not None,
     )
-    if args.agent_runtime == "gvisor":
+    if args.agent_command_json is not None and args.agent != "external":
+        raise ValueError(
+            "--agent-command-json is available only with --agent external"
+        )
+    if args.agent == "external":
+        if args.agent_runtime != "gvisor":
+            raise ValueError(
+                "External agents require --agent-runtime gvisor"
+            )
+        if not args.agent_image:
+            raise ValueError(
+                "--agent-image is required for --agent external"
+            )
+        agent_factory = GVisorAgentFactory(
+            GVisorAgentConfig(
+                image=args.agent_image,
+                command=args.agent_command_json,
+                runtime=args.agent_sandbox_runtime,
+                docker_binary=args.docker_binary,
+                memory=args.agent_memory,
+                cpus=args.agent_cpus,
+                pids_limit=args.agent_pids,
+                max_turns=args.max_agent_turns,
+                rpc_timeout_seconds=args.agent_rpc_timeout,
+            )
+        )
+    elif args.agent_runtime == "gvisor":
         if args.agent != "axonllm" or args.axonllm_mode != "fixture":
             raise ValueError(
                 "gVisor agent runtime requires --agent axonllm "

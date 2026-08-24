@@ -79,6 +79,94 @@ jobs:
           "${RUNNER_TEMP}/escape-lab-wheel/bin/escape-lab" \
             init "${RUNNER_TEMP}/consumer"
 
+  gvisor-agent-gate:
+    name: Credential-free gVisor Agent-RPC containment gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out Escape Lab
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned gVisor runtime
+        env:
+          GVISOR_RELEASE_PATH: release/20260817.0
+          GVISOR_ARCHIVE_SHA512: bd8271a7742f90e53373b2a8613f37f3ae2c765ff5e2e611a75a47167a323cab7519b149c50273307743491713525a14ad1b3e398651c93b16f3e248dfeff3dd
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/gvisor.tar.bz2"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --retry 3 \
+            "https://storage.googleapis.com/gvisor/releases/${GVISOR_RELEASE_PATH}/x86_64/gvisor.tar.bz2" \
+            --output "${archive}"
+          printf '%s  %s\n' "${GVISOR_ARCHIVE_SHA512}" "${archive}" \
+            | sha512sum --check -
+          sudo tar \
+            --extract \
+            --bzip2 \
+            --file "${archive}" \
+            --directory /usr/local/bin \
+            runsc \
+            containerd-shim-runsc-v1
+          sudo chmod 0755 \
+            /usr/local/bin/runsc \
+            /usr/local/bin/containerd-shim-runsc-v1
+          sudo /usr/local/bin/runsc install
+          sudo systemctl restart docker
+          /usr/local/bin/runsc --version
+          docker info --format '{{json .Runtimes}}' \
+            | python -c 'import json,sys; runtimes=json.load(sys.stdin); assert "runsc" in runtimes, runtimes'
+
+      - name: Install Escape Lab
+        run: python -m pip install ".[dev]"
+
+      - name: Build reviewed external Agent-RPC image
+        run: |
+          docker build \
+            --file examples/agent-rpc/Dockerfile \
+            --tag escape-lab-external-agent:ci \
+            .
+
+      - name: Run real arbitrary-agent integration under gVisor
+        env:
+          ESCAPE_LAB_EXTERNAL_AGENT_IMAGE: escape-lab-external-agent:ci
+          ESCAPE_LAB_AGENT_RUNTIME: runsc
+        run: |
+          python -m unittest \
+            tests.test_agent_sandbox.AgentSandboxTests.test_real_external_agent_runs_behind_pre_attested_policy \
+            -v
+
+      - name: Run credential-free gVisor containment gate
+        run: |
+          python -m escape_lab \
+            --artifacts-root artifacts/gvisor-external \
+            --agent external \
+            --agent-runtime gvisor \
+            --agent-image escape-lab-external-agent:ci \
+            gate \
+            --baseline baselines/gvisor-external.json \
+            --output-dir artifacts/gvisor-external/gate
+
+      - name: Preserve gVisor containment evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: credential-free-gvisor-agent-evidence
+          path: artifacts/gvisor-external
+          if-no-files-found: warn
+          retention-days: 14
+
   axonllm-gate:
     if: ${{ vars.ENABLE_PRIVATE_INTEGRATIONS == 'true' }}
     name: AxonLLM containment gate (optional)

@@ -43,9 +43,14 @@ public endpoint.
 - Frozen-run replay and reproducibility checks.
 - A separate append-only disclosure-status ledger.
 - An optional bridge to the existing Ostiari `Guard.validate` API.
-- Scripted and AxonLLM agent adapters using the same enforcement path.
-- An opt-in gVisor runtime that executes the reviewed offline AxonLLM fixture
-  process with no external network, provider credentials, or host mounts.
+- Scripted, AxonLLM, and external OCI Agent-RPC adapters using the same
+  enforcement path.
+- An opt-in gVisor runtime that executes either the reviewed offline AxonLLM
+  fixture or an arbitrary Agent-RPC image with no external network, injected
+  provider credentials, or host mounts.
+- Pre-execution Docker attestation: the agent container is created in a stopped
+  state and starts only after its runtime, image, command, namespaces,
+  filesystem, identity inputs, egress, and resource limits pass.
 - Threshold-based release gates with JSON, Markdown, HTML, and JUnit reports.
 - An executable Docker/gVisor range worker with fail-closed runtime checks,
   immutable local image resolution, in-boundary isolation probes, and verified
@@ -59,12 +64,18 @@ or gVisor backend moves range state, previews, checkpoints, modeled tool
 effects, and teardown into a hardened disposable worker while the control and
 evidence planes remain outside.
 
-The optional agent runtime now places the reviewed deterministic AxonLLM
-fixture process inside gVisor. It does not yet accept arbitrary user agents or
-live provider processes, and it cannot claim that the runtime/kernel resists
-every escape technique. Production use still requires dedicated Linux workers,
-reviewed syscall/MAC policy, signed images, external kill and evidence
-infrastructure, live-model qualification, and independent isolation testing.
+The optional agent runtime accepts arbitrary OCI images that implement the
+bounded `ostiari-agent-rpc-v1` protocol, including local-model agents bundled
+into an image. Application syscalls are mediated by gVisor, the root filesystem
+is read-only, writable space is restricted to bounded hardened tmpfs mounts,
+and the container has zero network egress. Credentialed remote providers are
+not reachable from this boundary; they require a separately reviewed broker
+that keeps credentials outside the workload.
+
+This still cannot claim that gVisor, Docker, or the host kernel resists every
+escape technique. Production use requires dedicated Linux workers, signed and
+attested images, external kill and evidence infrastructure, live-model
+statistical qualification, and independent isolation testing.
 The project does not claim production certification, universal agent safety, or
 safe handling of arbitrary exploit payloads.
 
@@ -201,6 +212,36 @@ The reviewed S03/S06/S09 gate passed under `runsc` with 0 containment failures,
 100% task completion and evidence completeness, no identity inputs, and
 verified container removal after every run. The stable summary is
 [`docs/results/axonllm-gvisor-fixture-v0.2.json`](docs/results/axonllm-gvisor-fixture-v0.2.json).
+
+## Run an external agent image inside gVisor
+
+Any image can connect through the bounded Agent-RPC protocol. The repository
+includes a dependency-free example:
+
+```bash
+docker build \
+  --file examples/agent-rpc/Dockerfile \
+  --tag escape-lab-external-agent:dev \
+  .
+
+escape-lab \
+  --agent external \
+  --agent-runtime gvisor \
+  --agent-image escape-lab-external-agent:dev \
+  run S06 --profile C4
+```
+
+Escape Lab resolves the local image ID, creates but does not start the
+container, verifies the complete Docker contract, then attaches over bounded
+stdin/stdout RPC. The host enforces the turn limit, bounds response and
+diagnostic buffering, disables Docker container logging, and removes the exact
+created container ID. To override an image command without invoking a host
+shell, pass
+`--agent-command-json '["python","/opt/agent/worker.py"]'`.
+
+See the [Agent-RPC specification](docs/agent-rpc.md) and
+[working example](examples/agent-rpc/). Direct provider credentials and public
+internet access are deliberately unavailable inside this boundary.
 
 ## AxonLLM release gate
 
@@ -438,12 +479,17 @@ AxonLLM integration test. Set
 `ESCAPE_LAB_SANDBOX_IMAGE=escape-lab-range:0.2.0` to include the real OCI range
 integration test; optionally set `ESCAPE_LAB_SANDBOX_RUNTIME=runsc`.
 Set `ESCAPE_LAB_AGENT_IMAGE=escape-lab-agent:dev` to include the real gVisor
-fixture-agent integration test; `ESCAPE_LAB_AGENT_RUNTIME` defaults to `runsc`.
+fixture-agent integration test. Set
+`ESCAPE_LAB_EXTERNAL_AGENT_IMAGE=escape-lab-external-agent:dev` to include the
+generic Agent-RPC integration test; `ESCAPE_LAB_AGENT_RUNTIME` defaults to
+`runsc`.
 
 The AxonLLM and Ostiari repositories are optional cross-repository
-dependencies. Their GitHub Actions jobs run only when the repository variable
-`ENABLE_PRIVATE_INTEGRATIONS=true` and secret `CROSS_REPO_TOKEN` are configured;
-the public OCI gate is otherwise fully self-contained.
+dependencies. Continuous CI installs a checksum-pinned `runsc`, builds the
+self-contained generic Agent-RPC example image, runs it under real gVisor, and
+evaluates `baselines/gvisor-external.json` without credentials or access to
+another repository. AxonLLM and Ostiari cross-repository jobs remain optional
+behind `ENABLE_PRIVATE_INTEGRATIONS=true` and require explicit authorization.
 
 ## Project layout
 
@@ -457,6 +503,7 @@ docs/                 Architecture, safety, and traceability
 docs/diagrams/        Editable Draw.io sources and exported PNGs
 docker/agent/         Credential-free AxonLLM fixture-agent image
 docker/range/         Executable hardened OCI/gVisor range worker image
+examples/agent-rpc/   Minimal arbitrary Agent-RPC worker and image
 incidents/            Safe synthetic replays derived from public disclosures
 ```
 

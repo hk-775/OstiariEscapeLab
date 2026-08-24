@@ -33,11 +33,21 @@ environment variable, credential file, host mount, or usable non-loopback
 network route. Startup fails closed unless the in-boundary isolation and
 identity-absence probes pass.
 
+External mode accepts any reviewed OCI image that implements
+`ostiari-agent-rpc-v1`. The host creates the container in a stopped state and
+verifies Docker's effective image, command, runtime, namespaces, filesystem,
+network, privilege, identity-input, healthcheck/restart, and resource-limit
+configuration before starting the agent process. The host contract is
+authoritative; self-attestation from an arbitrary image is optional and is
+never used to weaken a failed host check.
+
 Live mode may contact the provider routes configured by the operator. Scenario
 inputs and tool results remain synthetic, provider credentials stay inside
 AxonLLM's resolver/transport boundary, and Escape Lab stores only a redacted
-route summary. Live mode is not a substitute for independent T2 isolation of an
-arbitrary agent process.
+route summary. This credentialed host-side mode is distinct from the external
+gVisor boundary. A local model can run inside the external image, but a remote
+provider requires a future separately reviewed broker; the isolated agent is
+never given direct internet access or a provider key.
 
 ## Authorization
 
@@ -100,25 +110,33 @@ force-remove the exact named container. Normal teardown records the final
 snapshot, shuts down the worker, and verifies that the container no longer
 exists.
 
-This materially improves containment of the modeled range effects, but it is
-not an isolation certification. The agent/model process still runs outside this
-worker and can only be contained to the extent that its capabilities are
-restricted to mediated Escape Lab tools. Production T2 should additionally put
-the arbitrary agent process in a dedicated container or micro-VM, add reviewed
-seccomp/AppArmor policy, sign and attest images, separate
-control/execution/evidence accounts, enforce egress outside the workload
-namespace, and operate independent kill infrastructure.
+This materially improves containment of modeled range effects, but the range
+worker alone is not an agent-process boundary. Select the external gVisor agent
+runtime when the actual agent/model process must be isolated as well.
 
-When the gVisor fixture-agent runtime is selected, the reviewed AxonLLM fixture
-process does run inside a separate worker with the same hardening posture. It
-combines an in-boundary observation with inspection of Docker's actual
-container record. This dual attestation verifies `runsc`, network and IPC mode,
-the non-root user, read-only root, dropped capabilities, no-new-privileges,
-hardened tmpfs options, resource limits, and the absence of host mounts,
-devices, published ports, or identity environment inputs. It is force-removed
-on timeout or protocol failure and teardown is verified before the run is
-finalized. This does not extend to arbitrary or live agents, and it does not
-independently certify `runsc`, Docker, or the host kernel.
+For both the fixture and external agent runtime, Escape Lab first creates a
+stopped container and inspects Docker's actual record. Execution is refused
+unless `runsc`, `NetworkMode=none`, private IPC/PID/UTS/cgroup namespaces, a
+read-only root, no host mounts, hardened tmpfs options, non-root identity,
+dropped capabilities, no-new-privileges, no devices or published ports,
+disabled restart/healthcheck behavior, no recognized identity environment
+input, disabled container logging, and exact resource limits including swap
+all pass. Only then does the host attach and start the Agent-RPC process. The
+host also enforces the turn budget, bounds RPC and diagnostic buffering, and
+removes by the created container ID rather than by a reusable name.
+
+The reviewed AxonLLM fixture also performs in-boundary isolation and
+identity-absence probes. An arbitrary worker may report equivalent probes, but
+its claims are defense-in-depth only. `runsc` mediates application syscalls
+through the gVisor Sentry; Escape Lab does not semantically approve individual
+syscalls or independently certify `runsc`, Docker, or the host kernel.
+
+Image contents remain a supply-chain trust input. No host credential is
+injected, but an image built with an embedded secret cannot be proven clean by
+runtime configuration alone. Production T2 should sign and attest images, use
+dedicated Linux workers or micro-VMs where warranted, separate
+control/execution/evidence accounts, operate independent kill infrastructure,
+and commission an external isolation assessment.
 
 ## Disclosure
 

@@ -29,11 +29,13 @@ copy is stored in every run manifest.
 ## Agent adapters
 
 The orchestrator consumes an agent-session protocol rather than reading
-scenario steps directly. Two adapters currently implement it:
+scenario steps directly. Three adapters currently implement it:
 
 - `scripted-agent` resolves the reviewed deterministic reference trajectory;
 - `axonllm` opens an AxonLLM chat/tool loop, offers only synthetic range tools,
-  returns policy and tool observations, and records routed model metadata.
+  returns policy and tool observations, and records routed model metadata;
+- `external-agent-rpc` runs an arbitrary OCI-contained process that implements
+  the bounded `ostiari-agent-rpc-v1` stdin/stdout protocol.
 
 The AxonLLM fixture mode sends requests through AxonLLM's real router and
 OpenAI-shaped tool translation to a loopback-only provider stub. Live mode uses
@@ -45,6 +47,13 @@ in-process provider transport. The complete fixture process executes in a
 separate container with no non-loopback network route, provider configuration,
 credentials, or host mounts. A bounded JSON protocol carries only agent events
 and policy/tool observations between the worker and the host orchestrator.
+
+The same runtime can launch an external Agent-RPC image using its JSON-form
+`ENTRYPOINT`/`CMD` or an explicit shell-free argv. This supports agent
+frameworks and local models packaged into an OCI image. Credentialed remote
+provider traffic is intentionally unavailable because the boundary has no
+network interface or injected identity; it requires a separately reviewed
+broker outside this protocol.
 
 ## Run orchestrator
 
@@ -95,30 +104,41 @@ pass before the run begins. RPC timeouts force-remove the worker; normal
 teardown verifies container removal. The host-side agent adapter, orchestrator,
 control plane, adjudicator, and evidence store remain outside the worker.
 
-This boundary contains the modeled tool effects but does not yet isolate an
-arbitrary agent process or intercept direct syscalls outside the tool protocol.
+This range boundary contains modeled tool effects. Arbitrary agent execution is
+handled by the separate agent runtime below; direct process activity inside the
+agent container is isolated but is not translated into semantic tool evidence.
 
 ## Agent runtime
 
-The default agent runtime remains host-side for scripted regressions and live
-provider integrations. With `--agent-runtime gvisor`, the host instead starts
-the dedicated fixture-agent image by immutable image ID and requires `runsc`.
-The runtime uses the same non-root, read-only, capability-free,
-resource-bounded posture as the range worker and additionally verifies that
-common provider and cloud identity inputs are absent. Because gVisor does not
-surface every OCI setting identically through emulated `/proc`, startup
-requires two independent views: the worker's in-boundary observations and the
-host's inspection of Docker's actual container contract.
+The default agent runtime remains host-side for scripted regressions and
+credentialed AxonLLM provider integrations. With `--agent-runtime gvisor`, the
+host requires `runsc` and resolves the selected fixture or external image to an
+immutable local ID. It uses `docker create`, inspects the stopped container, and
+calls `docker start` only after every effective policy field passes. The
+contract binds the image, command, run ID, and protocol; verifies private
+namespaces, zero egress, read-only/no-mount filesystem isolation, non-root
+identity, zero capabilities, no-new-privileges, disabled healthcheck/restart
+and container logging behavior, and exact resource limits including swap; and
+records the result with the run.
 
-The worker uses no HTTP or socket fixture. It constructs AxonLLM's routing
-runtime with a deterministic in-memory provider, returns reviewed tool calls
-over the bounded control channel, and is force-removed on timeout, malformed
-protocol data, or teardown failure. Control decisions, range execution,
-adjudication, kill checks, and evidence remain outside the agent boundary.
+`runsc` places application syscalls behind the gVisor Sentry rather than
+allowing the containerized process to invoke the host kernel directly. This is
+syscall isolation, not semantic authorization of each syscall and not an
+independent certification of the runtime or kernel.
 
-This qualifies the reviewed fixture process, not arbitrary agent binaries,
-native extensions, live-model provider access, or runtime/kernel
-escape-resistance.
+The reviewed fixture additionally supplies in-boundary isolation and
+identity-absence probes. External images may supply the same probes, but the
+host's stopped-container record remains authoritative because an arbitrary
+agent's self-report is not trusted. All proposed actions still pass through the
+host control plane. The host enforces the turn budget and bounded RPC and
+diagnostic queues. Timeouts, malformed protocol data, failed attestation, or
+teardown errors fail closed and force removal of the exact created container
+ID.
+
+This supports arbitrary Agent-RPC binaries and bundled local models. It does
+not provide credentialed remote-model access, inspect the semantics of direct
+syscalls, verify that an image layer contains no embedded secret, or certify
+gVisor/Docker/kernel escape resistance.
 
 ## Evidence pipeline
 
