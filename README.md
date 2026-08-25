@@ -14,6 +14,18 @@ The diagram is maintained as an editable
 [architecture guide](docs/architecture.md) for the component and run-lifecycle
 views.
 
+### AWS reference deployment
+
+![Ostiari Escape Lab AWS reference architecture](docs/diagrams/aws-reference-architecture.png)
+
+Editable source:
+[`aws-reference-architecture.drawio`](docs/diagrams/aws-reference-architecture.drawio).
+
+This is a proposed production deployment using IAM/OIDC, Step Functions, SQS,
+DynamoDB, ECR, dedicated EC2 containment workers, an ECS inference broker,
+Amazon Bedrock, Secrets Manager, KMS, S3, CloudWatch, and CloudTrail. The
+current MVP does not provision or certify these AWS resources.
+
 This repository is a runnable developer preview. Its default scripted agent and
 synthetic range are deliberately non-offensive:
 

@@ -8,6 +8,18 @@ adjudication, and evidence so each layer can be replaced independently.
 Editable source:
 [`escape-lab-architecture.drawio`](diagrams/escape-lab-architecture.drawio).
 
+## AWS reference deployment
+
+![Escape Lab AWS reference deployment](diagrams/aws-reference-architecture.png)
+
+Editable source:
+[`aws-reference-architecture.drawio`](diagrams/aws-reference-architecture.drawio).
+
+The AWS view is a proposed production path, not deployed infrastructure. It
+keeps provider identity in a separate inference broker, runs containment
+workers on dedicated private EC2 capacity, and stores evidence outside the
+agent boundary.
+
 ## Run lifecycle
 
 ![Escape Lab run lifecycle](diagrams/run-lifecycle.png)

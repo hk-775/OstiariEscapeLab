@@ -51,6 +51,32 @@ class PublicationTests(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 self.assertGreater(path.stat().st_size, 0)
 
+    def test_readme_embeds_editable_aws_reference_architecture(self) -> None:
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        diagram_root = DOCS_ROOT / "diagrams"
+
+        self.assertIn(
+            "docs/diagrams/aws-reference-architecture.png",
+            readme,
+        )
+        self.assertIn(
+            "docs/diagrams/aws-reference-architecture.drawio",
+            readme,
+        )
+        self.assertIn(
+            "current MVP does not provision or certify these AWS resources",
+            readme,
+        )
+
+        for name in (
+            "aws-reference-architecture.png",
+            "aws-reference-architecture.drawio",
+        ):
+            with self.subTest(asset=name):
+                path = diagram_root / name
+                self.assertTrue(path.is_file())
+                self.assertGreater(path.stat().st_size, 0)
+
     def test_incident_result_records_controlled_and_uncontrolled_runs(self) -> None:
         result = json.loads(
             (
