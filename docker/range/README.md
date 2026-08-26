@@ -10,7 +10,7 @@ Build:
 ```bash
 docker build \
   -f docker/range/Dockerfile \
-  -t escape-lab-range:0.2.0 \
+  -t escape-lab-range:0.3.0b1 \
   .
 ```
 
@@ -18,7 +18,7 @@ Probe:
 
 ```bash
 PYTHONPATH=src python3.12 -m escape_lab preflight \
-  --docker-image escape-lab-range:0.2.0 \
+  --docker-image escape-lab-range:0.3.0b1 \
   --probe-docker
 ```
 
@@ -27,7 +27,7 @@ Run one scenario with the Docker default runtime:
 ```bash
 PYTHONPATH=src python3.12 -m escape_lab \
   --range-backend docker \
-  --sandbox-image escape-lab-range:0.2.0 \
+  --sandbox-image escape-lab-range:0.3.0b1 \
   run S02 --profile C4
 ```
 
@@ -36,7 +36,7 @@ Run it with gVisor after registering `runsc` as a Docker runtime:
 ```bash
 PYTHONPATH=src python3.12 -m escape_lab \
   --range-backend gvisor \
-  --sandbox-image escape-lab-range:0.2.0 \
+  --sandbox-image escape-lab-range:0.3.0b1 \
   run S02 --profile C4
 ```
 

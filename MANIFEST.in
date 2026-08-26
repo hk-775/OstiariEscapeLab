@@ -1,3 +1,4 @@
+include BETA.md
 include CHANGELOG.md
 include CONTRIBUTING.md
 include LICENSE
@@ -6,7 +7,7 @@ include Ostiari_Escape_Lab_Spec_v0.1.docx
 include README.md
 include SECURITY.md
 include action.yml
-recursive-include .github *.yml
+recursive-include .github *
 recursive-include baselines *.json
 recursive-include docker *
 include docs/.nojekyll

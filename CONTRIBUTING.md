@@ -3,6 +3,10 @@
 Escape Lab welcomes focused fixes, documentation improvements, new controls,
 and carefully reviewed synthetic scenarios.
 
+The project is currently in public beta. Compatibility-sensitive changes to the
+CLI, scenario schemas, evidence format, release baselines, or
+`ostiari-agent-rpc-v1` must include an explicit migration note.
+
 ## Development setup
 
 ```bash
@@ -52,3 +56,7 @@ defensive containment evaluation without materially increasing offensive
 capability.
 
 Security-sensitive findings should follow `SECURITY.md`, not a public issue.
+
+Release maintainers should follow
+[`docs/releasing.md`](docs/releasing.md). Public-beta scope and limitations are
+documented in [`BETA.md`](BETA.md).

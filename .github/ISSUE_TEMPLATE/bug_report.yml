@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible public-beta defect without sensitive data.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: checkboxes
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed credentials, customer data, exploit payloads, and sensitive logs.
+          required: true
+        - label: This is not an unpatched vulnerability report.
+          required: true
+  - type: input
+    attributes:
+      label: Version
+      description: Release, commit, Python version, and host platform.
+      placeholder: 0.3.0b1; Python 3.12; Ubuntu 24.04
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Area
+      options:
+        - CLI or packaging
+        - Scenario or control behavior
+        - Evidence, replay, or reporting
+        - Docker range
+        - gVisor Agent-RPC runtime
+        - AxonLLM or Ostiari integration
+        - Documentation or Pages
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Provide the smallest synthetic reproduction and redacted output.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected and observed behavior
+    validations:
+      required: true

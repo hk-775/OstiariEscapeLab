@@ -4,6 +4,20 @@ All notable user-visible changes are recorded here.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.3.0b1 - 2026-08-26
+
+Public beta:
+
+- Published the public-beta release contract, installation path, support
+  policy, contribution templates, ownership rules, and release runbook.
+- Added a tag-driven release workflow with version validation, tests, wheel
+  smoke installation, package metadata checks, SHA-256 checksums, build
+  provenance, and GitHub prerelease assets.
+- Added public CodeQL and Dependabot configuration while preserving pinned
+  GitHub Actions references and least-privilege workflow permissions.
+- Added the editable and rendered AWS reference deployment architecture.
 - Added a versioned private live-model benchmark plan for S02/S03/S06/S09 with
   30 paired C1–C4 trials, seeded fixture rotation, explicit sampling and spend
   authorization, complete statistical/operational metrics, profile thresholds,
