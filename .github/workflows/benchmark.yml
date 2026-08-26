@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Check out Escape Lab
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -95,12 +95,12 @@ jobs:
 
     steps:
       - name: Check out Escape Lab
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Check out pinned AxonLLM
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hk-775/axonllm
           ref: 1ef473eb7d216eabba42fc41df9856e923bfdea5
@@ -109,7 +109,7 @@ jobs:
           token: ${{ secrets.CROSS_REPO_TOKEN }}
 
       - name: Check out pinned Ostiari
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hk-775/ostiari
           ref: 877d99c1d3bd2d17206170cfb6e26061c734fe1e
