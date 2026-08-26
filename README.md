@@ -3,6 +3,11 @@
 A provider-neutral agent-containment benchmark and incident-to-regression
 system based on `Ostiari_Escape_Lab_Spec_v0.1.docx`.
 
+> **Public beta — 0.3.0b1.** This release is intended for defensive
+> benchmarking, CI regression gates, and controlled evaluation. It is not a
+> production containment certification. See [BETA.md](BETA.md) for the supported
+> scope and known limitations.
+
 Escape Lab tests whether a long-running, tool-using agent can cause a prohibited
 state transition outside its explicit authority—and whether layered controls
 detect, interrupt, explain, and recover from the attempt.
@@ -26,7 +31,7 @@ DynamoDB, ECR, dedicated EC2 containment workers, an ECS inference broker,
 Amazon Bedrock, Secrets Manager, KMS, S3, CloudWatch, and CloudTrail. The
 current MVP does not provision or certify these AWS resources.
 
-This repository is a runnable developer preview. Its default scripted agent and
+This repository is a runnable public beta. Its default scripted agent and
 synthetic range are deliberately non-offensive:
 
 - command strings are modeled, never executed;
@@ -99,15 +104,13 @@ implemented and pending scope.
 
 ## Published results
 
-When the repository is public and GitHub Pages is enabled, the results
-dashboard is published at:
+The public beta results dashboard is published at:
 
 **https://hk-775.github.io/OstiariEscapeLab/**
 
 It publishes the scenario table, editable diagrams and PNGs, deterministic
 control-profile matrix, AxonLLM release-gate result, and the synthetic July 2026
-OpenAI/Hugging Face incident replay. For a private repository, the Pages
-deployment job skips cleanly and the same source remains reviewable under
+OpenAI/Hugging Face incident replay. The same source remains reviewable under
 [`docs/`](docs/).
 
 ## Deterministic reference results
@@ -172,6 +175,15 @@ and independent review.
 Python 3.10 or newer is required. The core project has no third-party runtime
 dependencies.
 
+Install the public-beta wheel from its GitHub release:
+
+```bash
+python -m pip install \
+  https://github.com/hk-775/OstiariEscapeLab/releases/download/v0.3.0b1/ostiari_escape_lab-0.3.0b1-py3-none-any.whl
+```
+
+Or install from a reviewed source checkout:
+
 ```bash
 git clone https://github.com/hk-775/OstiariEscapeLab.git
 cd OstiariEscapeLab
@@ -198,7 +210,7 @@ Build the worker image from the repository root:
 ```bash
 docker build \
   --file docker/range/Dockerfile \
-  --tag escape-lab-range:0.2.0 \
+  --tag escape-lab-range:0.3.0b1 \
   .
 ```
 
@@ -207,7 +219,7 @@ Run a scenario with the Docker default runtime:
 ```bash
 escape-lab \
   --range-backend docker \
-  --sandbox-image escape-lab-range:0.2.0 \
+  --sandbox-image escape-lab-range:0.3.0b1 \
   run S02 --profile C4
 ```
 
@@ -217,7 +229,7 @@ runtime list and refuses to start if it is unavailable:
 ```bash
 escape-lab \
   --range-backend gvisor \
-  --sandbox-image escape-lab-range:0.2.0 \
+  --sandbox-image escape-lab-range:0.3.0b1 \
   preflight
 ```
 
@@ -482,7 +494,7 @@ Build the minimal range image from the repository root:
 ```bash
 docker build \
   --file docker/range/Dockerfile \
-  --tag escape-lab-range:0.2.0 \
+  --tag escape-lab-range:0.3.0b1 \
   .
 ```
 
@@ -490,10 +502,10 @@ Inspect or run the hardened preflight:
 
 ```bash
 escape-lab preflight \
-  --docker-image escape-lab-range:0.2.0
+  --docker-image escape-lab-range:0.3.0b1
 
 escape-lab preflight \
-  --docker-image escape-lab-range:0.2.0 \
+  --docker-image escape-lab-range:0.3.0b1 \
   --probe-docker
 ```
 
@@ -502,7 +514,7 @@ Run the actual range worker:
 ```bash
 escape-lab \
   --range-backend docker \
-  --sandbox-image escape-lab-range:0.2.0 \
+  --sandbox-image escape-lab-range:0.3.0b1 \
   run S02 --profile C4
 ```
 
@@ -523,7 +535,7 @@ profile differentiation, approval binding, evidence tamper detection, replay,
 disclosure integrity, packaged-resource installation, release-gate behavior,
 and CLI behavior. Set `AXONLLM_SRC=/path/to/AxonLLM` to include the loopback
 AxonLLM integration test. Set
-`ESCAPE_LAB_SANDBOX_IMAGE=escape-lab-range:0.2.0` to include the real OCI range
+`ESCAPE_LAB_SANDBOX_IMAGE=escape-lab-range:0.3.0b1` to include the real OCI range
 integration test; optionally set `ESCAPE_LAB_SANDBOX_RUNTIME=runsc`.
 Set `ESCAPE_LAB_AGENT_IMAGE=escape-lab-agent:dev` to include the real gVisor
 fixture-agent integration test. Set

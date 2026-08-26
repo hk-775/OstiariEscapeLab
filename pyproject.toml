@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools==82.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ostiari-escape-lab"
-version = "0.2.0"
+version = "0.3.0b1"
 description = "Provider-neutral agent containment benchmark and incident-to-regression system"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,7 +14,7 @@ authors = [{ name = "Ostiari project" }]
 dependencies = []
 keywords = ["ai", "agents", "containment", "evaluation", "security"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "Operating System :: OS Independent",
@@ -29,7 +29,7 @@ classifiers = [
 Homepage = "https://github.com/hk-775/OstiariEscapeLab"
 Repository = "https://github.com/hk-775/OstiariEscapeLab"
 Issues = "https://github.com/hk-775/OstiariEscapeLab/issues"
-Documentation = "https://github.com/hk-775/OstiariEscapeLab/tree/main/docs"
+Documentation = "https://hk-775.github.io/OstiariEscapeLab/"
 Changelog = "https://github.com/hk-775/OstiariEscapeLab/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]

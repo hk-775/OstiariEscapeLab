@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a defensive benchmark, containment, or usability improvement.
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    attributes:
+      label: Problem
+      description: What user or safety problem should be solved?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed behavior
+      description: Describe the expected interface, evidence, and failure mode.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Safety boundary
+      description: Explain effects on network, identity, filesystem, evidence, and teardown.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives
+      description: Describe any simpler approaches considered.

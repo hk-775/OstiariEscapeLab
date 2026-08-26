@@ -3,6 +3,18 @@
 Escape Lab is security-sensitive evaluation software. The latest release and
 the `main` branch receive security fixes; older revisions are best effort.
 
+## Supported versions
+
+| Version | Support |
+|---|---|
+| `0.3.0b1` | Public-beta security fixes |
+| `0.2.x` | Best effort |
+| `<0.2` | Unsupported |
+
+The beta is a defensive evaluation and CI product. It is not a certification
+that Docker, gVisor, the host kernel, or arbitrary third-party images resist
+every escape technique.
+
 ## Report a vulnerability
 
 Do not publish exploit details, credentials, sensitive logs, or an unpatched

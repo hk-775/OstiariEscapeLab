@@ -56,7 +56,7 @@ Real OCI range gate:
 ```bash
 docker build \
   --file docker/range/Dockerfile \
-  --tag escape-lab-range:0.2.0 \
+  --tag escape-lab-range:0.3.0b1 \
   .
 
 escape-lab \
@@ -64,7 +64,7 @@ escape-lab \
   --backend ostiari \
   --ostiari-src ../ostiari \
   --range-backend docker \
-  --sandbox-image escape-lab-range:0.2.0 \
+  --sandbox-image escape-lab-range:0.3.0b1 \
   gate \
   --baseline incidents/openai-huggingface-july-2026/sandbox-baseline.json
 ```

@@ -8,4 +8,4 @@ agent-provided shell commands and never opens network connections.
 from escape_lab.models import ControlProfile, Decision, OutcomeLevel, RunResult
 
 __all__ = ["ControlProfile", "Decision", "OutcomeLevel", "RunResult"]
-__version__ = "0.2.0"
+__version__ = "0.3.0b1"

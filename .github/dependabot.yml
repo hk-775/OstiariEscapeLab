@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: docker
+    directory: /docker/agent
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: docker
+  - package-ecosystem: docker
+    directory: /docker/range
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: docker
+
+  - package-ecosystem: docker
+    directory: /examples/agent-rpc
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: docker
