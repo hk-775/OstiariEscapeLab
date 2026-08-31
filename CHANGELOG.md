@@ -4,7 +4,10 @@ All notable user-visible changes are recorded here.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Disabled automated dependency-update pull requests while retaining
+  vulnerability alerts and manual reviewed updates.
 
 ## 0.3.0b1 - 2026-08-26
 
